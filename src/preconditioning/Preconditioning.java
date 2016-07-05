@@ -122,7 +122,7 @@ public class Preconditioning {
 							record.cell = Integer.parseInt(str[i * 4 + 4]);
 
 							Station station = sp.getStation(record.lac, record.cell);
-							if (station == null)
+							if (station == null || station.site_map == -1)
 								continue;
 							else
 								record.site = station.site_map;//site_index
