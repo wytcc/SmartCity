@@ -175,34 +175,35 @@ public class Preconditioning {
 						
 						//System.out.println(validRecordNumber);
 						
-//						int start = 0, end;
-//						while (start < validRecordNumber){
-////							System.out.println("here");
-//							end = start + 1;
-//							Station stationI = sp.getStation(pr.records.get(start).lac, pr.records.get(start).cell);
-//							while (end < validRecordNumber){
-//								Station stationJ = sp.getStation(pr.records.get(end).lac, pr.records.get(end).cell);
-//								double dis = GPS2Dist.distance(stationI.latitude, stationI.longitude, stationJ.latitude,
-//										stationJ.longitude);//calculate the distance between two points
-//								if(dis > StaticParam.DISTANCE_STAY){
-//									double timeInterval = pr.records.get(end).time - pr.records.get(start).time;//calculate the time span between two points
-//									if (timeInterval > StaticParam.TIME_STAY){
-//										//note the points
-//										for (int a = start + 1; a < end; a++){
-//											stay[a] = StaticParam.IN;//在距离范围内的记录点
-//										}
-//									}//inner if time
-//									start = end;
+						int start = 0, end;
+						while (start < validRecordNumber){
+//							System.out.println("here");
+							end = start + 1;
+							Station stationI = sp.getStation(pr.records.get(start).lac, pr.records.get(start).cell);
+							while (end < validRecordNumber){
+								Station stationJ = sp.getStation(pr.records.get(end).lac, pr.records.get(end).cell);
+								double dis = GPS2Dist.distance(stationI.latitude, stationI.longitude, stationJ.latitude,
+										stationJ.longitude);//calculate the distance between two points
+								if(dis > StaticParam.DISTANCE_STAY){
+									double timeInterval = pr.records.get(end).time - pr.records.get(start).time;//calculate the time span between two points
+									if (timeInterval > StaticParam.TIME_STAY){
+										//note the points
+										for (int a = start + 1; a < end; a++){
+											stay[a] = StaticParam.IN;//在距离范围内的记录点
+										}
+									}//inner if time
+									start = end;
 //									System.out.println("inner " + start );
-//									break;
-//								}//outer if distance
-//								else if(dis <= StaticParam.DISTANCE_STAY && end == validRecordNumber-1){
-//									start = validRecordNumber;
-//								}
-//								end++;
+									break;
+								}//outer if distance
+								//这部分用于处理一个人的末尾几个记录，这些记录距离和时间都不够，如果不特殊处理的话会进入死循环，因为start一直没有变大
+								else if(dis <= StaticParam.DISTANCE_STAY && end == validRecordNumber){
+									start = validRecordNumber;
+								}
+								end++;
 //								System.out.println("end " + end );
-//							}
-//						}
+							}
+						}
 						
 
 //						System.out.println("here");
