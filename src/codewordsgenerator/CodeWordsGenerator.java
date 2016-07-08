@@ -290,17 +290,20 @@ public class CodeWordsGenerator {
 							//System.out.println("============"+i+"\t"+t+"================");
 							Meta[] pt = prune2(p, t);
 							int flagfeature = 1;
+							System.out.println("pt's length" + pt.length);
 							e.time[t][0]=pt[0].time;
 							e.time[t][1]=pt[pt.length-1].time;
-							if(pt[pt.length-1].state==0){
-								e.moveornot[t]=false;
+
+							if(pt[pt.length-1].state==2){//2代表静止的结束
+								e.moveornot[t]=false;//不动
 								moveflag=0;
 							}
-							else if(pt[pt.length-1].state==1){
+							else{
 								e.moveornot[t]=true;
 								moveflag=1;
 							}
-							System.out.println(moveflag);
+							
+							
 							for (int lu = 0; lu < pt.length; lu++) {
 								if (sp.site.get(pt[lu].site).longitude < 120.53695
 										|| sp.site.get(pt[lu].site).longitude > 120.900696)
@@ -419,37 +422,94 @@ public class CodeWordsGenerator {
 					i++;
 					count++;
 					prestate=1;
+				}else{
+					count++;
+					prestate=2;
+					System.err.println("Error3 "+(count-1)+"\t"+p[count-1].state);
+					break;
 				}
 			}else if(prestate==1){
 				if(p[count].state==1){
 					count++;
-				}else if(p[count].state==0){
-					i++;
+					;
+				}else if(p[count].state==2){
 					count++;
+					prestate=2;
+				}else{
+					count++;
+					prestate=0;
+					System.err.println("Error4 "+i+" "+(count-1)+"\t"+p[count-1].state);
+					break;
+				}
+			}else {
+				if(p[count].state==1){
+					count++;
+					i++;
+					prestate=1;
+				}else if(p[count].state==2){
+					count++;
+					prestate=2;
+					System.err.println("Error5 "+(count-1));
+					break;
+				}
+				else {
+					count++;
+					i++;
 					prestate=0;
 				}
 			}
 		}
 		
 		int start=0;
-		start = count - 1;
-		System.out.println(start);
-		
+		if(prestate==1){
+			if(count-2>=0){
+				if(p[count-2].state==2){
+					start=count-2;
+				}else if(p[count-2].state==0){
+					start=count-1;
+				}else{
+					System.err.println("EEEEE");
+				}
+			}else{
+				start=count-1;
+			}
+		}else if(prestate==0){
+			if(count-2>=0){
+				if(p[count-2].state==2){
+					start=count-2;
+				}else{
+					System.err.println("EEEEE");
+				}
+			}else{
+				start=count-1;
+			}
+		}else{
+			System.err.println("EEEEE");
+		}
+		//System.out.print(start+"\t");
 		if(p[start].state==0){
 			prestate=0;
-			while(prestate==0&&start<p.length&&p[start].state==0){
+			while(prestate==0&&start<p.length){
 				tmp.add(p[start]);
 				prestate=p[start].state;
 				start++;
 			}
 		}else if(p[start].state==1){
 			prestate=1;
-			while(prestate==1&&start<p.length&&p[start].state==0){
+			while(prestate!=2&&start<p.length){
+				tmp.add(p[start]);
+				prestate=p[start].state;
+				start++;
+			}
+		}else{
+			prestate=2;
+			while(prestate!=1&&start<p.length){
 				tmp.add(p[start]);
 				prestate=p[start].state;
 				start++;
 			}
 		}
+		
 		return tmp.toArray(new Meta[0]);
 	}
 

@@ -101,6 +101,7 @@ public class Preconditioning {
 					line++;
 					if(line == 10000) break;
 					String[] str = tempString.split(" ");//使用空格切割
+//					System.out.println(tempString);
 					
 					try {
 						//读入一行数据，切割处理存入Record数据结构中
@@ -165,48 +166,71 @@ public class Preconditioning {
 						
 						//System.out.println("here");
 						
+						
+						
+						//------------------------------------------------------------------
+						//标记停留点
 						//停留时间30分钟，距离500m
 						int[] stay = new int[validRecordNumber];
 						
-						//init the stay array
-						for (int i = 0; i < validRecordNumber; i++){
-							stay[i] = StaticParam.OUT;
-						}
-						
-						//System.out.println(validRecordNumber);
-						
-						int start = 0, end;
-						while (start < validRecordNumber){
-//							System.out.println("here");
-							end = start + 1;
-							Station stationI = sp.getStation(pr.records.get(start).lac, pr.records.get(start).cell);
-							while (end < validRecordNumber){
-								Station stationJ = sp.getStation(pr.records.get(end).lac, pr.records.get(end).cell);
-								double dis = GPS2Dist.distance(stationI.latitude, stationI.longitude, stationJ.latitude,
-										stationJ.longitude);//calculate the distance between two points
-								if(dis > StaticParam.DISTANCE_STAY){
-									double timeInterval = pr.records.get(end).time - pr.records.get(start).time;//calculate the time span between two points
-									if (timeInterval > StaticParam.TIME_STAY){
-										//note the points
-										for (int a = start + 1; a < end; a++){
-											stay[a] = StaticParam.IN;//在距离范围内的记录点
-										}
-									}//inner if time
-									start = end;
-//									System.out.println("inner " + start );
+						for (int i = 0; i < validRecordNumber; i++) {
+							stay[i] = 0;
+							Station staI = sp.getStation(pr.records.get(i).lac, pr.records.get(i).cell);
+							int j = i;
+							for (; j < validRecordNumber; j++) {
+								Station staJ = sp.getStation(pr.records.get(j).lac, pr.records.get(j).cell);
+								double dis = GPS2Dist.distance(staI.latitude, staI.longitude, staJ.latitude,
+										staJ.longitude);
+								if (dis > StaticParam.DISTANCE_STAY) {
 									break;
-								}//outer if distance
-								//这部分用于处理一个人的末尾几个记录，这些记录距离和时间都不够，如果不特殊处理的话会进入死循环，因为start一直没有变大
-								else if(dis <= StaticParam.DISTANCE_STAY && end == validRecordNumber){
-									start = validRecordNumber;
 								}
-								end++;
-//								System.out.println("end " + end );
+							}
+							if (j > i + 1 && j < validRecordNumber
+									&& (pr.records.get(j).time - pr.records.get(i).time) > StaticParam.TIME_STAY) {
+								for (int k = i; k < j; k++) {
+									stay[k] = 1;
+								}
+								stay[j - 1] = 2;
+								i = j;
+							}
+							if (j == validRecordNumber) {
+								for (int k = i; k < j; k++) {
+									stay[k] = 1;
+								}
+								stay[j-1] = 2;
 							}
 						}
-						
+						for (int i = 0; i < validRecordNumber-1;i++) {
+							if(stay[i]==0 && stay[i+1]==2){
+								stay[i+1]=0;
+							}
+							else if(stay[i]==1 && stay[i+1]==0){
+								stay[i]=0;
+								if(i>=1)
+									i=i-2;
+							}
+							else if(stay[i]==0 && stay[i+1]==2){
+								stay[i+1]=0;
+							}
+							else if(stay[i]==2 && stay[i+1]==2){
+								stay[i+1]=0;
+							}
+						}
 
-//						System.out.println("here");
+						for (int i = 0; i < validRecordNumber-1;i++) {
+							if(stay[i]==1 && stay[i+1]==1){
+								
+							}else if(stay[i]==0 && stay[i+1]==1){}
+							else if(stay[i]==1 && stay[i+1]==2){}
+							else if(stay[i]==0 && stay[i+1]==0){}
+							else if(stay[i]==2 && stay[i+1]==0){}
+							else if(stay[i]==2 && stay[i+1]==1){}
+							else{
+							System.out.println(i+" "+stay[i]+stay[i+1]+"error");
+							}
+						}
+
+						System.out.println("here");
 						
 						//--------------------------------------------------------------------------------------
 						//统计，计算出相邻记录的时间间隔，步长为1min，如果相邻记录在同一个地点则时间累加，统计出在0-1min、1-2min......区间中记录的个数
@@ -506,7 +530,7 @@ public class Preconditioning {
 	
 	public static void main(String[] args) {
 		Preconditioning program = new Preconditioning();
-		program.readFileByLine("data");
+		program.readFileByLine("data/raw");
 		System.out.println("程序运行结束");
 	}
 }
