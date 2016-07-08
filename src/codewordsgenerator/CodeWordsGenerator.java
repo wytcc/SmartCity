@@ -191,44 +191,44 @@ public class CodeWordsGenerator {
 					p[j] = new Meta(time, userid, state, longitude, latitude, cluNo);
 					p[j].site = site;//因为构造函数中没有他
 					
-//					if(prestate==-1){//prestate为-1代表没有初始化,prestate代表的意义是前一个状态
-//						prestate=state;//赋值为从数据库中读出的state的值
-//						streamnum++;
-//					}else{
-//						if(state==1){
-//							if(prestate==0){
-//								streamnum++;
-//								prestate=1;
-//							}
-//							else if(prestate==1){
-//								;
-//							}
-//							else{
-//								streamnum++;
-//								prestate=1;
-//							}
-//						}else if(state==2){
-//							if(prestate==0||prestate==2){
-//								prestate=2;
-//								System.err.println("Error1 "+i);
-//								break;
-//							}
-//							else{
-//								prestate=2;
-//							}
-//						}else {
-//							if(prestate==0){;}
-//							else if(prestate==2){
-//								prestate=0;
-//								streamnum++;
-//							}else {
-//								prestate=state;
-//								System.err.println("Error2 "+i);
-//							}
-//						}
-//					}
+					if(prestate==-1){//prestate为-1代表没有初始化,prestate代表的意义是前一个状态
+						prestate=state;//赋值为从数据库中读出的state的值
+						streamNum++;
+					}else{
+						if(state==1){
+							if(prestate==0){
+								streamNum++;
+								prestate=1;
+							}
+							else if(prestate==1){
+								;
+							}
+							else{
+								streamNum++;
+								prestate=1;
+							}
+						}else if(state==2){
+							if(prestate==0||prestate==2){
+								prestate=2;
+								System.err.println("Error1 "+i);
+								break;
+							}
+							else{
+								prestate=2;
+							}
+						}else {
+							if(prestate==0){;}
+							else if(prestate==2){
+								prestate=0;
+								streamNum++;
+							}else {
+								prestate=state;
+								System.err.println("Error2 "+i);
+							}
+						}
+					}
 					
-					if (prestate == -1){//prestate代表前一个记录的停留标记
+					/*if (prestate == -1){//prestate代表前一个记录的停留标记
 						prestate = state;
 						streamNum++;
 					}else if (prestate == 0){
@@ -245,7 +245,7 @@ public class CodeWordsGenerator {
 							prestate = state;
 						}
 						//如果现在的标记仍然是1，则不作任何处理
-					}
+					}*/
 					
 				}
 
