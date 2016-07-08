@@ -99,7 +99,7 @@ public class Preconditioning {
 					if (line % 10000 == 0)
 						System.out.println("已经读取到第" + line + "行");
 					line++;
-					if(line == 10000) break;
+					//if(line == 10000) break;
 					String[] str = tempString.split(" ");//使用空格切割
 //					System.out.println(tempString);
 					
