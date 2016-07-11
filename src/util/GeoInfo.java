@@ -15,7 +15,7 @@ public class GeoInfo {
 	
 	public void getGeoInfo(Meta[] p, float[] in) {
 
-		HashMap<String, Long> time = new HashMap<String, Long>();
+		HashMap<String, Long> time = new HashMap<String, Long>();//key是经纬度，value是从开始到当前的时间间隔
 		
 		double valid_movedis = 0;
 		double valid_time = 0;
@@ -70,7 +70,7 @@ public class GeoInfo {
 				}
 				
 			}
-		}
+		}//for
 		
 		in[fType.MoveDis.ordinal()] = (float) (Math.log( valid_movedis+1)/Math.log(2))  ;
 		if(valid_time > 0)
@@ -83,8 +83,8 @@ public class GeoInfo {
 		
 		String[] str = time.keySet().toArray(new String[0]);
 		for(int i=0; i<str.length; i++) {
-			String[] loc = str[i].split(",");
-			double ratio = (time.get(str[i]) / timecount);
+			String[] loc = str[i].split(",");//把经纬度切分开
+			double ratio = (time.get(str[i]) / timecount);//这一段占总时间的比例
 			in[fType.AveLocX.ordinal()] += Float.parseFloat(loc[1]) * ratio;
 			in[fType.AveLocY.ordinal()] += Float.parseFloat(loc[0]) * ratio;
 		}
@@ -105,8 +105,8 @@ public class GeoInfo {
 		for(int i=0;i<p.length;i++)
 		{
 			CellSite cs = sp.site.get(p[i].site);
-			double dist=GPS2Dist.distance(cs.latitude, cs.longitude, in[fType.AveLocY.ordinal()], in[fType.AveLocX.ordinal()]);
-			sum_rg+=dist*dist;	
+			double dist=GPS2Dist.distance(cs.latitude, cs.longitude, in[fType.AveLocY.ordinal()], in[fType.AveLocX.ordinal()]);//到轨迹中心点的距离
+			sum_rg+=dist*dist;	//半径的平方
 		}
 		in[fType.Rg.ordinal()]=(float)Math.sqrt(sum_rg/p.length);
 		in[fType.Rg.ordinal()]= (float)(  Math.log(in[fType.Rg.ordinal()]+1)/Math.log(2)   );
