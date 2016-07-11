@@ -18,20 +18,20 @@ public class ClusterModule {
 	public KmeansData data;
 	public KmeansData data2;
 	double criteria = 5e-6;
-	int attempts = 1000;//尝试，进攻
-	public int clusternum = 20;
+	int attempts = 1000;//尝试
+	public int clusternum = 20;//聚20个类
 	public int clusternum2 = 20;
 	public int totalClusternum = clusternum;//总的簇数=clusternum
 	public double[][] range;
 	
 	int nearc = 8;
 	
-	//fusion融合的意思
+	//fusion点属于附近类的概率
 	
 	public void dataPrepare(Element[] e, int validtrajcount, int validframecount) {
 		timevector= new int[validframecount];
 		int vectorlength=0;
-		int flag=0;
+		int flag=0;//用于标记特征向量是否为空
 		for(int j=0;j<e.length;j++)
 		{
 			if(flag==1)
@@ -46,10 +46,10 @@ public class ClusterModule {
 			    }
 		    }
 		}
-		points = new double[validframecount][vectorlength];
+		points = new double[validframecount][vectorlength];//validframecount为轨迹的段数，vectorlength为几个特征
 		int pindex = 0;
 		
-		range = new double[vectorlength][2];
+		range = new double[vectorlength][2];//这里的2指范围的开始与结束，即上下限   指不同类的值的上下限，第一维指的是特征数
 		
 		for(int i=0; i<e.length; i++) {  //number of users
 			
@@ -61,18 +61,18 @@ public class ClusterModule {
 						
 						if(pindex == 0) {
 							range[k][0] = range[k][1] = points[pindex][k];
-						} else {
+						} else {//不断更新范围
 							if(points[pindex][k] > range[k][1])
 								range[k][1] = points[pindex][k];
 							else if(points[pindex][k] < range[k][0])
 								range[k][0] = points[pindex][k];
 						}
 						
-					}
+					}//for
 					pindex++;
 				}
-			}
-		}
+			}//for number of frames
+		}//for number of users
 		
 		pindex = 0;
 		for(int i=0; i<e.length; i++) {
@@ -101,7 +101,7 @@ public class ClusterModule {
 		
 		long t1 = System.currentTimeMillis();
 		
-		data = new KmeansData(points, points.length, points[0].length); 
+		data = new KmeansData(points, points.length, points[0].length); //对应构造函数public KmeansData(double[][] data, int length, int dim)
 		KmeansParam param = new KmeansParam(); 
 		param.criteria = this.criteria;
 		param.attempts = this.attempts;
@@ -112,195 +112,16 @@ public class ClusterModule {
 
 		System.out.println("cost: " + (System.currentTimeMillis()-t1) / 1000.0);
 		
-		clusterWriter("cluster_" + clusternum + ".csv", data.dim, data.centerCounts, data.centers);
+		clusterWriter("cluster_" + clusternum + ".csv", data.dim, data.centerCounts, data.centers);//写文件，得到cluster_20.csv和ClusterCenter20
 		clusterFusion(e, data);
 		
 		System.out.println();
 		
 	}
-	
-public void cluster(Element[] e, int validtrajcount, int validframecount, int k, int c, String name, int[] dataindex) {
-		
-		clusternum = k;
-		nearc = c;
-		dataPrepare(e, validtrajcount, validframecount, dataindex);
-		
-		totalClusternum += clusternum;
-
-		System.out.println("data prepared");
-		
-		long t1 = System.currentTimeMillis();
-		
-		KmeansData data = new KmeansData(points, points.length, points[0].length); 
-		KmeansParam param = new KmeansParam(); 
-		param.criteria = this.criteria;
-		param.attempts = this.attempts;
-		param.initCenterMehtod = KmeansParam.CENTER_RANDOM; 
-
-		
-		Kmeans.doKmeans(clusternum, data, param);
-
-		System.out.println("cost: " + (System.currentTimeMillis()-t1) / 1000.0);
-		
-		
-		System.out.print("The labels of points is: ");
-		
-		data.sort();
-		
-		clusterWriter(name + "_cluster_" + clusternum + ".txt", 
-				data.dim, data.centerCounts, data.centers); 
-		
-		clusterFusion(e, data);
-		
-		System.out.println();
-	}
-
-public void dataPrepare(Element[] e, int validtrajcount, int validframecount, int[] dataindex) {
-	
-	points = new double[validframecount][dataindex.length];
-	int pindex = 0;
-	
-	double[][] range = new double[dataindex.length][2];
-	
-	for(int i=0; i<e.length; i++) {
-		for(int j=0; j<e[i].featureVector.length; j++) {
-			if(e[i].featureVector[j] != null) {
-				for(int k=0; k<dataindex.length; k++) {
-					points[pindex][k] = e[i].featureVector[j][dataindex[k]];
-					
-					if(pindex == 0) {
-						range[k][0] = range[k][1] = points[pindex][k];
-					} else {
-						if(points[pindex][k] > range[k][1])
-							range[k][1] = points[pindex][k];
-						else if(points[pindex][k] < range[k][0])
-							range[k][0] = points[pindex][k];
-					}
-					
-				}
-				pindex++;
-			}
-		}
-	}
-	
-	pindex = 0;
-	for(int i=0; i<e.length; i++) {
-		for(int j=0; j<e[i].featureVector.length; j++) {
-			if(e[i].featureVector[j] != null) {
-				for(int k=0; k<dataindex.length; k++) {
-					points[pindex][k] = (points[pindex][k] - range[k][0]) / (range[k][1] - range[k][0]);
-				}
-				pindex++;
-			}
-		}
-	}
-	
-}
-	
-	
-	public void dataPrepare_perFrame(Element[] e, int frameindex, int[] dataindex) {
-		int validframecount = 0;
-		for(int i=0; i<e.length; i++) {
-			if(e[i].featureVector[frameindex] != null)
-				validframecount++;
-		}
-		
-		points = new double[validframecount][dataindex.length];
-		int pindex = 0;
-		
-		double[][] range = new double[dataindex.length][2];
-		
-		for(int i=0; i<e.length; i++) {
-			int j = frameindex;
-				if(e[i].featureVector[j] != null) {
-					for(int k=0; k<dataindex.length; k++) {
-						points[pindex][k] = e[i].featureVector[j][dataindex[k]];
-						
-						if(pindex == 0) {
-							range[k][0] = range[k][1] = points[pindex][k];
-						} else {
-							if(points[pindex][k] > range[k][1])
-								range[k][1] = points[pindex][k];
-							else if(points[pindex][k] < range[k][0])
-								range[k][0] = points[pindex][k];
-						}
-						
-					}
-					pindex++;
-				}
-			
-		}
-		
-		pindex = 0;
-		for(int i=0; i<e.length; i++) {
-			int j =frameindex;
-				if(e[i].featureVector[j] != null) {
-					for(int k=0; k<dataindex.length; k++) {
-						points[pindex][k] = (points[pindex][k] - range[k][0]) / (range[k][1] - range[k][0]);
-					}
-					pindex++;
-				}
-			
-		}
-		
-	}
-	
-	
-	public void cluster_perFrame(Element[] e, int validtrajcount, int validframecount, int k, int c, String name, int[] dataindex) {
-		
-		clusternum = k;
-		nearc = c;
-		int dim = 0;
-		totalClusternum += clusternum;
-		
-		int[] centerCounts_tatol = new int[clusternum * e[0].featureVector.length];
-		double[][] centers_total = new double[clusternum * e[0].featureVector.length][];
-		
-		for(int i=0; i<e[0].featureVector.length; i++) {
-			dataPrepare_perFrame(e, i, dataindex);
-			
-			System.out.println("data prepared");
-			
-			long t1 = System.currentTimeMillis();
-			
-			KmeansData data = new KmeansData(points, points.length, points[0].length); 
-			KmeansParam param = new KmeansParam(); 
-			param.criteria = this.criteria;
-			param.attempts = this.attempts;
-			param.initCenterMehtod = KmeansParam.CENTER_RANDOM; 
-
-			
-			Kmeans.doKmeans(clusternum, data, param);
-
-			System.out.println("cost: " + (System.currentTimeMillis()-t1) / 1000.0);
-			
-			
-			System.out.print("The labels of points is: ");
-			
-			data.sort();
-			
-			clusterFusion_perFrame(e, i, data);
-			
-			dim = data.dim;
-			
-			System.out.println();
-			
-			System.arraycopy(data.centerCounts, 0, centerCounts_tatol, i*data.centerCounts.length, data.centerCounts.length);
-			System.arraycopy(data.centers, 0, centers_total, i*data.centers.length, data.centers.length);
-		}
-		
-		System.out.println();
-		
-		clusterWriter(name + "_cluster_" + clusternum + ".txt", 
-				dim, centerCounts_tatol, centers_total); 
-
-		
-	}
-	
 	
 	public void clusterFusion(Element[] e, KmeansData data) {//点属于附近聚类的概率
 		int pindex = 0;
-		int startindex = totalClusternum - clusternum;
+		int startindex = totalClusternum - clusternum;//开始的下标
 		
 		for(int i=0; i<e.length; i++) {
 			
@@ -351,59 +172,6 @@ public void dataPrepare(Element[] e, int validtrajcount, int validframecount, in
 		}
 	}
 	
-	public void clusterFusion_perFrame(Element[] e, int frameindex, KmeansData data) {
-		int pindex = 0;
-		int startindex = totalClusternum - clusternum;
-		
-		for (int i = 0; i < e.length; i++) {
-			float[] vtemp = new float[totalClusternum];
-			if (e[i].featureVector[frameindex] != null) {
-
-				if (e[i].value[frameindex] != null)
-					System.arraycopy(e[i].value[frameindex], 0, vtemp, 0,
-							e[i].value[frameindex].length);
-
-				int belong = data.labels[pindex];
-
-				double[] dis = new double[data.centers.length];
-				HashSet<Double> temp = new HashSet<Double>();
-				for (int k = 0; k < data.centers.length; k++) {
-					dis[k] = dist(points[pindex], data.centers[k],
-							data.centers[k].length);
-					temp.add(dis[k]);
-				}
-				Double[] hashset = temp.toArray(new Double[0]);
-				Arrays.sort(hashset);
-
-				int near_c = nearc;
-				if (hashset.length < near_c)
-					near_c = hashset.length;
-				float total = 0;
-				for (int k = 0; k < dis.length; k++) {
-					if (dis[k] <= hashset[near_c - 1]) {
-						vtemp[startindex + k] = (float) KERNEL_NORMAL(dis[k],
-								0, 0.1f);
-						total += vtemp[startindex + k];
-					}
-				}
-
-				for (int k = 0; k < dis.length; k++) {
-					if (total == 0) {
-						vtemp[startindex + k] = 0.0f;
-						continue;
-					}
-					vtemp[startindex + k] /= total;
-				}
-
-				pindex++;
-			} else {
-				vtemp = null;
-			}
-
-			e[i].value[frameindex] = vtemp;
-		}
-	}
-
 	public double dist(double[] pa, double[] pb, int dim) {
         double rv = 0;
         for (int i = 0; i < dim; i++) {

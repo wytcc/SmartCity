@@ -124,7 +124,7 @@ public class Kmeans {
         data.centers = centers;
         int[] centerCounts = new int[k]; // 各聚类的包含点个数
         data.centerCounts = centerCounts;
-        Arrays.fill(centerCounts, 0);
+        Arrays.fill(centerCounts, 0);//赋值初始化为0
         int[] labels = new int[data.length]; // 各个点所属聚类标号
         data.labels = labels;
         double[][] oldCenters = new double[k][data.dim]; // 临时缓存旧的聚类中心坐标

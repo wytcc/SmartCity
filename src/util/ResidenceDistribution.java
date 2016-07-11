@@ -53,8 +53,8 @@ public class ResidenceDistribution {
 	public float[][] residenceJudge(Meta[] p) {//0:00-6:00的版本
 		
 		int[][] tag = new int[time_slice.length][2];
-		for(int i=0; i<time_slice.length; i++) {//every day i
-			for(int j = 0; j < p.length; j++) {//一个人的不同数据
+		for(int i=0; i<time_slice.length; i++) {//every day i   遍历每一天
+			for(int j = 0; j < p.length; j++) {//一个人的不同数据  遍历一个人的不同数据记录点的时间
 				if(p[j].time <= time_slice[i][0]) {
 					tag[i][0] = tag[i][1] = j;
 				} else if(p[j].time >= time_slice[i][1]) {
@@ -68,7 +68,7 @@ public class ResidenceDistribution {
 		HashMap<Integer, Long> temp = new HashMap<Integer, Long>();
 		long total = 0;
 		for(int i=0; i<tag.length; i++) {
-			if(tag[i][1] > tag[i][0]) {//去掉了0:00-6:00没有记录的情况
+			if(tag[i][1] > tag[i][0]) {//去掉了0:00-6:00没有记录的情况，因为如果有记录的话，一定是tag[i][1] > tag[i][0]，没有记录的话，tag[i][1] = 0
 
 				for(int j=tag[i][0]; j<=tag[i][1]; j++) {//头和尾
 

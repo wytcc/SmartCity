@@ -20,7 +20,7 @@ public class KmeansData {
 	public int dim;
 	public int[] labels;
 	public double[][] centers;
-	public int[] centerCounts;
+	public int[] centerCounts;//各聚类的包含点个数
 	
 	public KmeansData(double[][] data, int length, int dim) {
 		this.data = data;

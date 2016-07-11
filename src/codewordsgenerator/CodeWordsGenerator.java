@@ -70,11 +70,15 @@ public class CodeWordsGenerator {
 	int catalogs=10;
 
 	public enum fType {
-		ETrand, Eunc,AveSpeed, MoveDis, Rg, MoveRatio, AveLocX, AveLocY, HomeLocX, HomeLocY// ,
-																				// HomeDis
+		ETrand, Eunc,AveSpeed, MoveDis, Rg, MoveRatio, AveLocX, AveLocY, HomeLocX, HomeLocY
 
-	};
+	};//AveLocY 轨迹的中心点   //moveratio 到家的平均距离  //rg 回转半径，这段轨迹的运动范围，轨迹的半径 
 
+	//静的特征
+//	public enum fTypeS {
+//		MoveRatio, AveLocX, AveLocY, TD
+//	};
+	
 
 	public Element[] codewords;
 	public int validTrajCount= 0;
@@ -121,9 +125,9 @@ public class CodeWordsGenerator {
 		interval = 2 * 60 * 60 * 1000;// 2 hour
 		frameinterval = 15 * 60 * 1000;// 15 min
 		
-		userTrajReader();
+		userTrajReader();//初始化codewords、validTrajCount、validFrameCount
 
-		cm.cluster(codewords, validTrajCount, validFrameCount);
+		cm.cluster(codewords, validTrajCount, validFrameCount);//聚类
 		savefeaturevector();
 
 	}
@@ -160,8 +164,8 @@ public class CodeWordsGenerator {
 			ArrayList<Element> element = new ArrayList<Element>();
 //			ArrayList<Element> selement = new ArrayList<Element>();
 //			ArrayList<Element> melement = new ArrayList<Element>();
-			DBCursor cursor=module.coll.find();
-			for (int i = 0; i < size; i++) {
+			DBCursor cursor=module.coll.find();//读预处理得到的mongoDB数据库，即Trajactory2016
+			for (int i = 0; i < size; i++) {//遍历前size个人的记录
 				DBObject dbj=cursor.next();
 				long userid=(long) dbj.get("userid");
 				
@@ -191,6 +195,7 @@ public class CodeWordsGenerator {
 					p[j] = new Meta(time, userid, state, longitude, latitude, cluNo);
 					p[j].site = site;//因为构造函数中没有他
 					
+					//遍历得到streamNum的值，即动的和静的的段数
 					if(prestate==-1){//prestate为-1代表没有初始化,prestate代表的意义是前一个状态
 						prestate=state;//赋值为从数据库中读出的state的值
 						streamNum++;
@@ -228,26 +233,7 @@ public class CodeWordsGenerator {
 						}
 					}
 					
-					/*if (prestate == -1){//prestate代表前一个记录的停留标记
-						prestate = state;
-						streamNum++;
-					}else if (prestate == 0){
-						//如果现在的标记是1，则段数加一
-						if (state == 1){
-							streamNum++;
-							prestate = state;
-						}
-						//如果现在的标记仍然是0，则不作任何处理
-					}else if (prestate == 1){
-						//如果现在的标记是0，则段数加一
-						if (state == 0){
-							streamNum++;
-							prestate = state;
-						}
-						//如果现在的标记仍然是1，则不作任何处理
-					}*/
-					
-				}
+				}//遍历一个人的所有记录点
 
 				//////////////////////////////////////////
 
@@ -256,12 +242,15 @@ public class CodeWordsGenerator {
 					if (isValid(p)) {
 						Element e = new Element();
 						e.id = userid;
-						e.moveornot=new boolean[streamNum];
-						e.time= new Long[streamNum][2];//猜测，这里的二维分别代表开始时间和结束时间
+						e.moveornot=new boolean[streamNum];//是否是运动轨迹
+						e.time= new Long[streamNum][2];//这里的二维分别代表开始时间和结束时间
 						
-						e.featureVector = new float[streamNum][fType.values().length];//特征向量，分别描述每一段是什么
+						e.featureVector = new float[streamNum][fType.values().length];//特征向量，分别描述每一段是什么，十个特征
+						//-----------------------------------------------------------------//
+						//-------------这里待改进，运动轨迹片段和静止轨迹片段的特征不同---------------//上面一行
+						//-----------------------------------------------------------------//
 						e.location = new float[streamNum][(int) (2 * interval / frameinterval)];
-						float Residence_longitude = 0;
+						float Residence_longitude = 0;//住宅的经纬度
 						float Residence_latitude = 0;
 						//////////////
 						float[][] ret = rd.residenceJudge(p.clone());
@@ -286,7 +275,7 @@ public class CodeWordsGenerator {
 							continue;
 						int moveflag=0;
 
-						for (int t = 0; t < streamNum; t++) {
+						for (int t = 0; t < streamNum; t++) {//遍历一个人的所有动静片段
 							//System.out.println("============"+i+"\t"+t+"================");
 							Meta[] pt = prune2(p, t);
 							int flagfeature = 1;
@@ -326,8 +315,8 @@ public class CodeWordsGenerator {
 								e.featureVector[t][fType.HomeLocX.ordinal()] = Residence_longitude;
 								e.featureVector[t][fType.HomeLocY.ordinal()] = Residence_latitude;
 
-								MobilityEntropy.entropy(pt, e.featureVector[t]);
-								gi.getGeoInfo(pt, e.featureVector[t]);
+								MobilityEntropy.entropy(pt, e.featureVector[t]);//计算得到ETrand和Eunc的值
+								gi.getGeoInfo(pt, e.featureVector[t]);//计算得到MoveDis、AveSpeed、AveLocX、AveLocY、MoveRatio、Rg的值
 								BasicDBObject doc=new BasicDBObject();
 								ArrayList reocords=new ArrayList<>();
 								for(int k=0;k<pt.length;k++){
@@ -347,16 +336,16 @@ public class CodeWordsGenerator {
 									append("HomeLocY",Residence_latitude).
 									append("records", reocords).
 									append("movestate", moveflag);
-								module.coll2.insert(doc);
+								module.coll2.insert(doc);//把一段轨迹处理后的动静片段数据存入数据库
 								
 								/////////////
-								validFrameCount++;
+								validFrameCount++;//动或静片段数加一
 							} else {
 								System.out.println("hehedahehedaheheda");
 								e.featureVector[t] = null;
 							}
 
-						}
+						}//for
 
 						int flag = 0;
 						int mflag=0;
@@ -376,7 +365,7 @@ public class CodeWordsGenerator {
 							}
 							
 								
-							validTrajCount++;
+							validTrajCount++;//轨迹数加一
 							element.add(e);
 
 						}
@@ -388,7 +377,7 @@ public class CodeWordsGenerator {
 				if (i % 10 == 0 && i != 0) {
 					System.out.println("**** " + i);
 				}
-			}
+			}//for 遍历前size个人的记录
 
 			System.out.print("\n");
 

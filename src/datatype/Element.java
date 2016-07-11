@@ -2,7 +2,7 @@ package datatype;
 
 public class Element {
 	public long id;
-	public float[][] value;
+	public float[][] value;//描述的是点属于附近聚类的概率
 	public float[][] featureVector;
 	
 	public float[][] location;
