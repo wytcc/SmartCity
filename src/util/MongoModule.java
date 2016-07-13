@@ -28,8 +28,8 @@ public class MongoModule {
 		mongoClient=new MongoClient(nameString,port);
 		db=mongoClient.getDB("db");
 		mongoDB = mongoClient.getDatabase("db");
-		coll = db.getCollection("Trajectory2016");
-		mongoDBCollection = mongoDB.getCollection("Trajectory2016");
+		coll = db.getCollection("Trajectory2016test");
+		mongoDBCollection = mongoDB.getCollection("Trajectory2016test");
 	}
 	
 

@@ -69,25 +69,21 @@ public class CodeWordsGenerator {
 	Color[] col_schema;
 	int catalogs=10;
 
+	//前八个是move状态，后四个是stop状态
 	public enum fType {
-		ETrand, Eunc,AveSpeed, MoveDis, Rg, MoveRatio, AveLocX, AveLocY, HomeLocX, HomeLocY
-
-	};//AveLocY 轨迹的中心点   //moveratio 到家的平均距离  //rg 回转半径，这段轨迹的运动范围，轨迹的半径 
-
-	//静的特征
-//	public enum fTypeS {
-//		MoveRatio, AveLocX, AveLocY, TD
-//	};
+		ETrand, Eunc,AveSpeed, MoveDis, Rg, MoveRatio, AveLocX, AveLocY, AveLocXS, AveLocYS, MoveRatioS, TDS
+	};
 	
 
 	public Element[] codewords;
 	public int validTrajCount= 0;
 	public int validFrameCount = 0;
+	public int index = 0;//validFrameCount对应的动静数组中的下标
 	public int nearc = 3;
 	ClusterModule cm;
 	ResidenceDistribution rd;
 	GeoInfo gi;
-	String databasename="mobiledata";//SQL数据库名
+	String databasename="mobiledata2016";//SQL数据库名
 	int size=50;
 	public CodeWordsGenerator() {
 
@@ -98,8 +94,8 @@ public class CodeWordsGenerator {
 			module.coll3=module.db.getCollection("featurevector_test");
 		}
 		else{
-			module.coll2=module.db.getCollection("templist");
-			module.coll3=module.db.getCollection("featurevectorw");
+			module.coll2=module.db.getCollection("templist2016");
+			module.coll3=module.db.getCollection("featurevector2016");
 		}
 		if(module.coll2.find().count()>0){  
 			module.coll2.remove(new BasicDBObject());  //To remove all documents use the BasicDBObject
@@ -138,10 +134,28 @@ public class CodeWordsGenerator {
 		while(cursor.hasNext()){
 			BasicDBObject dbj=(BasicDBObject) cursor.next();
 			int validFrameCount=(int) dbj.get("validFrameCount");
-			ArrayList featurevector=new ArrayList();
-			for(int i=0;i<fType.values().length;i++){
-				featurevector.add(cm.data.data[validFrameCount][i]);
+			ArrayList<Double> featurevector=new ArrayList<Double>();
+			int moveflag = (int)dbj.get("movestate");
+			
+			if (cm.stopDataMap.containsKey(validFrameCount)){//如果是静轨迹
+				index = cm.stopDataMap.get(validFrameCount);
+				
+				for(int i=0;i<8;i++){//前补0
+					featurevector.add(0.0);
+				}
+				for(int i = 0; i < cm.dataStop.data[index].length; i++){
+					featurevector.add(cm.dataStop.data[index][i]);
+				}
+			} else if (cm.moveDataMap.containsKey(validFrameCount)){//如果是动轨迹
+				index = cm.moveDataMap.get(validFrameCount);
+				for(int i=0;i<cm.dataMove.data[index].length;i++){//后补0
+					featurevector.add(cm.dataMove.data[index][i]);
+				}
+				for(int i = 0; i < 4; i++){
+					featurevector.add(0.0);
+				}
 			}
+			
 			dbj.append("featurevector",featurevector);
 			module.coll3.insert(new BasicDBObject("validFrameCount",validFrameCount), dbj);
 		}
@@ -246,9 +260,7 @@ public class CodeWordsGenerator {
 						e.time= new Long[streamNum][2];//这里的二维分别代表开始时间和结束时间
 						
 						e.featureVector = new float[streamNum][fType.values().length];//特征向量，分别描述每一段是什么，十个特征
-						//-----------------------------------------------------------------//
-						//-------------这里待改进，运动轨迹片段和静止轨迹片段的特征不同---------------//上面一行
-						//-----------------------------------------------------------------//
+						//动静轨迹片段不同，动的占前八位，静的占后四位
 						e.location = new float[streamNum][(int) (2 * interval / frameinterval)];
 						float Residence_longitude = 0;//住宅的经纬度
 						float Residence_latitude = 0;
@@ -312,11 +324,12 @@ public class CodeWordsGenerator {
 									e.featureVector[t][f] = 0.0f;
 								}
 								/////////////
-								e.featureVector[t][fType.HomeLocX.ordinal()] = Residence_longitude;
-								e.featureVector[t][fType.HomeLocY.ordinal()] = Residence_latitude;
+//								e.featureVector[t][fType.HomeLocX.ordinal()] = Residence_longitude;
+//								e.featureVector[t][fType.HomeLocY.ordinal()] = Residence_latitude;
+								////////////////////////////////////
 
 								MobilityEntropy.entropy(pt, e.featureVector[t]);//计算得到ETrand和Eunc的值
-								gi.getGeoInfo(pt, e.featureVector[t]);//计算得到MoveDis、AveSpeed、AveLocX、AveLocY、MoveRatio、Rg的值
+								gi.getGeoInfo(pt, e.featureVector[t], Residence_longitude, Residence_latitude);//计算得到MoveDis、AveSpeed、AveLocX、AveLocY、MoveRatio、Rg的值
 								BasicDBObject doc=new BasicDBObject();
 								ArrayList reocords=new ArrayList<>();
 								for(int k=0;k<pt.length;k++){
@@ -348,8 +361,6 @@ public class CodeWordsGenerator {
 						}//for
 
 						int flag = 0;
-						int mflag=0;
-						int sflag=0;
 						for (int ii = 0; ii < e.featureVector.length; ii++) {
 							if (e.featureVector[ii] != null)
 								flag++;
@@ -522,7 +533,7 @@ public class CodeWordsGenerator {
 		int[][] statetimecount=new int[timeidcount][2];
 		try {
 			String filename="Matlab";
-			if(databasename=="mobiledata_test")
+			if(databasename=="mobiledata2016")
 				filename="Matlab_test";
 			DataOutputStream datawriter = new DataOutputStream(
 						new BufferedOutputStream(new FileOutputStream("data/"+filename)));
@@ -618,7 +629,7 @@ public class CodeWordsGenerator {
 		SQLModule sqlModule=new SQLModule();
 		sqlModule.connect();
 		String tableName = databasename+ "." + "clustertrajectoryw";
-		String truncateString="TRUNCATE TABLE ";
+		String truncateString="TRUNCATE TABLE ";//删除内容
 		
 		Statement stmt = sqlModule.conn.createStatement();
 		System.out.println("Clear Old Data ...");
@@ -635,7 +646,7 @@ public class CodeWordsGenerator {
 		stmt.execute(truncateString+ databasename + ".nodeuserswithouttime");
 		stmt.execute(truncateString+ databasename + ".nodesize");
 
-		System.out.println();
+		System.out.println("truncate completed");
 		stmt.execute("DROP INDEX inddex on "+ databasename + ".clustertrajectory");
 		stmt.execute("DROP INDEX inddex on "+ databasename + ".clusterstatistics");
 		stmt.execute("DROP INDEX inddex on "+ databasename + ".clustertrajwithouttime");
@@ -671,26 +682,50 @@ public class CodeWordsGenerator {
 					DBObject dbj=cursor.next();
 					SQLInsert insert=new SQLInsert();
 					int validFrameCount=(Integer)dbj.get("validFrameCount");
-					int clusterid=cm.data.labels[validFrameCount];
+					int clusterid=0;
+					double distance=0.0;
 					int moveflag=(Integer)dbj.get("movestate");
 					long userid=(long)dbj.get("userid");
 					int timeindex=(int) ((time-stime)/interval);
-
-					double[] codewords=new double[fType.values().length];
+					
+					if (cm.stopDataMap.containsKey(validFrameCount)){//静
+						index = cm.stopDataMap.get(validFrameCount);
+						clusterid=cm.dataStop.labels[index] + 10;
+						statecount[timeindex][clusterid][0]++;
+						for(int id=0;id<cm.dataStop.data[index].length;id++){
+							int dim=(int) Math.floor(cm.dataStop.data[index][id]*(catalogs*1.0));
+							if(dim==catalogs)
+								dim=catalogs-1;
+							clusterstatistics[timeindex][cm.dataStop.labels[index]+10][id][dim]++;
+						}
+						
+						double[] codewords=new double[cm.dataStop.data[index].length];//cm.dataStop.data[index].length指的是特征向量数
+						for (int s = 0; s < cm.dataStop.data[index].length; s++) {
+							codewords[s]=cm.dataStop.data[index][s];
+						}
+						distance=Kmeans.dist(codewords,cm.dataStop.centers[clusterid-10],cm.dataStop.data[index].length);//因为静轨迹找对应的静的聚类中心，所以cluster-10，得到在静止数据中属于的聚类
+						
+					}else if (cm.moveDataMap.containsKey(validFrameCount)){//动
+						index = cm.moveDataMap.get(validFrameCount);
+						clusterid=cm.dataMove.labels[index];
+						statecount[timeindex][clusterid][1]++;
+						for(int id=0;id<cm.dataMove.data[index].length;id++){
+							int dim=(int) Math.floor(cm.dataMove.data[index][id]*(catalogs*1.0));
+							if(dim==catalogs)
+								dim=catalogs-1;
+							clusterstatistics[timeindex][cm.dataMove.labels[index]][id][dim]++;
+						}
+						
+						double[] codewords=new double[cm.dataMove.data[index].length];
+						for (int s = 0; s < cm.dataMove.data[index].length; s++) {
+							codewords[s]=cm.dataMove.data[index][s];
+						}
+						distance=Kmeans.dist(codewords,cm.dataMove.centers[clusterid],cm.dataMove.data[index].length);
+						
+					}
+					
 					ArrayList reocords=(ArrayList) dbj.get("records");
 					String traj="";
-					
-					
-					if(moveflag==1)
-						statecount[timeindex][clusterid][1]++;
-					else 
-						statecount[timeindex][clusterid][0]++;
-					for(int id=0;id<cm.data.data[validFrameCount].length;id++){
-						int dim=(int) Math.floor(cm.data.data[validFrameCount][id]*(catalogs*1.0));
-						if(dim==catalogs)
-							dim=catalogs-1;
-						clusterstatistics[timeindex][cm.data.labels[validFrameCount]][id][dim]++;
-					}
 					
 					for(int w=0;w<cm.clusternum;w++){
 						result.add(new ArrayList<SQLInsert>());
@@ -703,11 +738,7 @@ public class CodeWordsGenerator {
 					ArrayList record=(ArrayList)reocords.get(reocords.size()-1);
 					traj=traj+"["+Double.valueOf((double)record.get(0))+","+Double.valueOf((double)record.get(1));
 					traj=traj+"]";
-					for (int s = 0; s <fType.values().length ; s++) {
-						codewords[s]=cm.data.data[validFrameCount][s];
-					}
-					
-					double distance=Kmeans.dist(codewords,cm.data.centers[clusterid],fType.values().length);
+
 					insert.clusterid=clusterid;
 					insert.time=time;
 					insert.traj=traj;
@@ -772,7 +803,14 @@ public class CodeWordsGenerator {
 			DBObject dbj=dbCursor.next();
 			int validFrameCount=(Integer)dbj.get("validFrameCount");
 			long userid=(long)dbj.get("userid");
-			int clusterid=cm.data.labels[validFrameCount];
+			int clusterid=0;
+			if (cm.stopDataMap.containsKey(validFrameCount)){
+				index = cm.stopDataMap.get(validFrameCount);
+				clusterid = cm.dataStop.labels[index]+10;
+			}else if (cm.moveDataMap.containsKey(validFrameCount)){
+				index = cm.moveDataMap.get(validFrameCount);
+				clusterid = cm.dataStop.labels[index];
+			}
 			int moveflag=(Integer)dbj.get("movestate");
 			long starttime=(long)dbj.get("starttime");
 			long endtime=(long)dbj.get("endtime");
@@ -781,7 +819,9 @@ public class CodeWordsGenerator {
 			int endid=(int)Math.floor((endtime-stime)/interval);
 			Double homelocx=(Double)dbj.get("HomeLocX");
 			Double homelocy=(Double)dbj.get("HomeLocY");	
-			double[] codewords=new double[fType.values().length];
+			////////////////////
+			//double[] codewords=new double[fType.values().length];
+			/////////////////
 			ArrayList reocords=(ArrayList) dbj.get("records");
 			nodesize[clusterid]++;
 			if(nodeuserwithouttime[clusterid]==""){
@@ -791,6 +831,7 @@ public class CodeWordsGenerator {
 			}
 			String traj="";
 			String tmp="";
+			//一共是84，可能会改 加倍一下
 			if (startid<0)
 				startid=0;
 			if(endid>83)
@@ -814,18 +855,37 @@ public class CodeWordsGenerator {
 				preuserid=userid;
 				prehomelocy=homelocy;
 				prehomelocx=homelocx;
-				for(int k=0;k<fType.values().length;k++){
-					dataavg[k]+=cm.data.data[validFrameCount][k];
+				if (cm.stopDataMap.containsKey(validFrameCount)){
+					index = cm.stopDataMap.get(validFrameCount);
+					for(int k=0;k<cm.dataStop.data[index].length;k++){
+						dataavg[k]+=cm.dataStop.data[index][k];
+					}
+				}else if (cm.moveDataMap.containsKey(validFrameCount)){
+					index = cm.moveDataMap.get(validFrameCount);
+					for(int k=0;k<cm.dataMove.data[index].length;k++){
+						dataavg[k]+=cm.dataMove.data[index][k];
+					}
 				}
+				
 				datacount++;
 				
 			}
 			else if(preuserid==userid){
 				prehomelocy=homelocy;
 				prehomelocx=homelocx;
-				for(int k=0;k<fType.values().length;k++){
-					dataavg[k]+=cm.data.data[validFrameCount][k];
+				
+				if (cm.stopDataMap.containsKey(validFrameCount)){
+					index = cm.stopDataMap.get(validFrameCount);
+					for(int k=0;k<cm.dataStop.data[index].length;k++){
+						dataavg[k]+=cm.dataStop.data[index][k];
+					}
+				}else if (cm.moveDataMap.containsKey(validFrameCount)){
+					index = cm.moveDataMap.get(validFrameCount);
+					for(int k=0;k<cm.dataMove.data[index].length;k++){
+						dataavg[k]+=cm.dataMove.data[index][k];
+					}
 				}
+				
 				datacount++;
 				clusterreocrd+=tmp;
 			}else{
@@ -859,21 +919,48 @@ public class CodeWordsGenerator {
 				prehomelocx=homelocx;
 				preuserid=userid;
 				datacount=1;
-				for(int k=0;k<fType.values().length;k++){
-					dataavg[k]+=cm.data.data[validFrameCount][k];
+				
+				if (cm.stopDataMap.containsKey(validFrameCount)){
+					index = cm.stopDataMap.get(validFrameCount);
+					for(int k=0;k<cm.dataStop.data[index].length;k++){
+						dataavg[k]+=cm.dataStop.data[index][k];
+					}
+				}else if (cm.moveDataMap.containsKey(validFrameCount)){
+					index = cm.moveDataMap.get(validFrameCount);
+					for(int k=0;k<cm.dataMove.data[index].length;k++){
+						dataavg[k]+=cm.dataMove.data[index][k];
+					}
 				}
+				
 				clusterreocrd=tmp;
 			}
 
-			for(int id=0;id<cm.data.data[validFrameCount].length;id++){
-				int dim=(int) Math.floor(cm.data.data[validFrameCount][id]*(catalogs*1.0));
-				if(dim==catalogs)
-					dim=catalogs-1;
-				countwithouttime[cm.data.labels[validFrameCount]][id][dim]++;
-				clustertotal[id][dim]++;
-				clusteravg[cm.data.labels[validFrameCount]][id]+=cm.data.data[validFrameCount][id];
-				clustercount[cm.data.labels[validFrameCount]][id]++;
+			if (cm.stopDataMap.containsKey(validFrameCount)){
+				index = cm.stopDataMap.get(validFrameCount);
+				for(int id=0;id<cm.dataStop.data[index].length;id++){
+					int dim=(int) Math.floor(cm.dataStop.data[index][id]*(catalogs*1.0));
+					if(dim==catalogs)
+						dim=catalogs-1;
+					countwithouttime[cm.dataStop.labels[index]+10][id][dim]++;
+					clustertotal[id][dim]++;
+					clusteravg[cm.dataStop.labels[index]+10][id]+=cm.dataStop.data[index][id];
+					clustercount[cm.dataStop.labels[index]+10][id]++;
+				}
+			}else if (cm.moveDataMap.containsKey(validFrameCount)){
+				index = cm.moveDataMap.get(validFrameCount);
+				for(int id=0;id<cm.dataMove.data[index].length;id++){
+					int dim=(int) Math.floor(cm.dataMove.data[index][id]*(catalogs*1.0));
+					if(dim==catalogs)
+						dim=catalogs-1;
+					countwithouttime[cm.dataMove.labels[index]][id][dim]++;
+					clustertotal[id][dim]++;
+					clusteravg[cm.dataMove.labels[index]][id]+=cm.dataMove.data[index][id];
+					clustercount[cm.dataMove.labels[index]][id]++;
+				}
 			}
+			
+			
+			
 			for(int s=0;s<reocords.size()-1;s++){
 				ArrayList record=(ArrayList)reocords.get(s);
 				traj=traj+"["+Double.valueOf((double)record.get(0))+","+Double.valueOf((double)record.get(1));
@@ -882,10 +969,25 @@ public class CodeWordsGenerator {
 			ArrayList record=(ArrayList)reocords.get(reocords.size()-1);
 			traj=traj+"["+Double.valueOf((double)record.get(0))+","+Double.valueOf((double)record.get(1));
 			traj=traj+"]";
-			for (int s = 0; s <fType.values().length ; s++) {
-				codewords[s]=cm.data.data[validFrameCount][s];
+			
+			double distance=0.0;
+			if (cm.stopDataMap.containsKey(validFrameCount)){
+				index = cm.stopDataMap.get(validFrameCount);
+				double codewords[] = new double[cm.dataStop.data[index].length];
+				for (int s = 0; s <cm.dataStop.data[index].length; s++) {
+					codewords[s]=cm.dataStop.data[index][s];
+				}
+				distance=Kmeans.dist(codewords,cm.dataStop.centers[clusterid-10],cm.dataStop.data[index].length);
+			}else if (cm.moveDataMap.containsKey(validFrameCount)){
+				index = cm.moveDataMap.get(validFrameCount);
+				double codewords[] = new double[cm.dataMove.data[index].length];
+				for (int s = 0; s <cm.dataMove.data[index].length; s++) {
+					codewords[s]=cm.dataMove.data[index][s];
+				}
+				distance=Kmeans.dist(codewords,cm.dataMove.centers[clusterid],cm.dataMove.data[index].length);
 			}
-			double distance=Kmeans.dist(codewords,cm.data.centers[clusterid],fType.values().length);
+			
+			
 			SQLInsert insert=new SQLInsert();
 			insert.clusterid=clusterid;
 			insert.time=(long) -1;
@@ -893,7 +995,8 @@ public class CodeWordsGenerator {
 			insert.distance=distance;
 			insert.state=moveflag;
 			resultArrayList.get(clusterid).add(insert);
-		}
+		}//while
+		
 		for(int i=0;i<cm.clusternum;i++){
 			Collections.sort(resultArrayList.get(i),new SortByDis());
 			int count=resultArrayList.get(i).size()<1000?resultArrayList.get(i).size():1000;
@@ -980,14 +1083,32 @@ public class CodeWordsGenerator {
 		sql="INSERT INTO "+databasename+".clusteravg VALUES (?,?,?)";
 		psts = (PreparedStatement) sqlModule.conn.prepareStatement(sql);
 		t=System.currentTimeMillis();
-		for(int i=0;i<cm.clusternum;i++)
-			for(int j=0;j<clusteravg[i].length;j++){
-				float tmp=(float) (clusteravg[i][j]/clustercount[i][j]);
-				psts.setInt(1, i);
-				psts.setInt(2, j);
-				psts.setFloat(3, tmp);
-				psts.addBatch();			
+		for(int i=0;i<cm.clusternum;i++){
+			if (cm.stopDataMap.containsKey(validFrameCount)){
+				for(int j = 0; j < 4; j++){
+					float tmp=(float) (clusteravg[i][j]/clustercount[i][j]);
+					psts.setInt(1, i);
+					psts.setInt(2, j);
+					psts.setFloat(3, tmp);
+					psts.addBatch();
+				}
+			}else if(cm.moveDataMap.containsKey(validFrameCount)){
+				for(int j = 0; j < 8; j++){
+					float tmp=(float) (clusteravg[i][j]/clustercount[i][j]);
+					psts.setInt(1, i);
+					psts.setInt(2, j);
+					psts.setFloat(3, tmp);
+					psts.addBatch();
+				}
 			}
+//			for(int j=0;j<clusteravg[i].length;j++){
+//				float tmp=(float) (clusteravg[i][j]/clustercount[i][j]);
+//				psts.setInt(1, i);
+//				psts.setInt(2, j);
+//				psts.setFloat(3, tmp);
+//				psts.addBatch();			
+//			}
+		}
 		psts.executeBatch();
 		System.out.println("write clusterstatistics average end\ncost: "+(System.currentTimeMillis()-t)/1000.0);
 		System.out.println();
@@ -1047,11 +1168,16 @@ public class CodeWordsGenerator {
 		System.out.println("start writing clusterrange");
 		t=System.currentTimeMillis();
 		sql="insert into "+databasename+".clusterrange values( ";
-		for(int i=0;i<9;i++){
-			String tmp="\"["+String.valueOf(cm.range[i][0])+","+String.valueOf(cm.range[i][1])+"]\",";
+		
+		for(int i=0;i<8;i++){
+			String tmp="\"["+String.valueOf(cm.rangeMove[i][0])+","+String.valueOf(cm.rangeMove[i][1])+"]\",";
 			sql=sql+tmp;
 		}
-		String tmp="\"["+String.valueOf(cm.range[9][0])+","+String.valueOf(cm.range[9][1])+"]\");";
+		for(int i=0;i<3;i++){
+			String tmp="\"["+String.valueOf(cm.rangeStop[i][0])+","+String.valueOf(cm.rangeStop[i][1])+"]\",";
+			sql=sql+tmp;
+		}
+		String tmp="\"["+String.valueOf(cm.rangeStop[3][0])+","+String.valueOf(cm.rangeStop[3][1])+"]\");";
 		sql=sql+tmp;
 		stmt.execute(sql);	
 		System.out.println("write clusterrange end\ncost: "+(System.currentTimeMillis()-t)/1000.0);
