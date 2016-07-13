@@ -13,7 +13,7 @@ public class GeoInfo {
 		this.sp = sp;
 	}
 	
-	public void getGeoInfo(Meta[] p, float[] in) {
+	public void getGeoInfo(Meta[] p, float[] in, double latitude, double longitude) {
 
 		HashMap<String, Long> time = new HashMap<String, Long>();//key是经纬度，value是从开始到当前的时间间隔
 		
@@ -35,7 +35,7 @@ public class GeoInfo {
 						time.put(lockey, time.get(lockey) + (p[i].time - p[i-1].time));
 					} else
 						time.put(lockey, (p[i].time - p[i-1].time));
-					double mrdis=GPS2Dist.distance(cs.latitude, cs.longitude, in[fType.HomeLocY.ordinal()], in[fType.HomeLocX.ordinal()]);
+					double mrdis=GPS2Dist.distance(cs.latitude, cs.longitude, latitude, longitude);
 					moveratio+=mrdis*(p[i].time - p[i-1].time);
 					moveratiotime+= (p[i].time - p[i-1].time);
 					timecount += (p[i].time - p[i-1].time);
@@ -62,8 +62,8 @@ public class GeoInfo {
 					valid_movedis += dis;
 					valid_time += (p[i].time - p[i-1].time);
 					
-					double mrdis0=GPS2Dist.distance(cs0.latitude, cs0.longitude, in[fType.HomeLocY.ordinal()], in[fType.HomeLocX.ordinal()]);
-					double mrdis1=GPS2Dist.distance(cs1.latitude, cs1.longitude, in[fType.HomeLocY.ordinal()], in[fType.HomeLocX.ordinal()]);
+					double mrdis0=GPS2Dist.distance(cs0.latitude, cs0.longitude, latitude, longitude);
+					double mrdis1=GPS2Dist.distance(cs1.latitude, cs1.longitude, latitude, longitude);
 					moveratio+=(mrdis1+mrdis0)/2*(p[i].time - p[i-1].time);
 					moveratiotime+= (p[i].time - p[i-1].time);
 					
@@ -71,6 +71,8 @@ public class GeoInfo {
 				
 			}
 		}//for
+		
+		in[fType.TDS.ordinal()] = (float)(valid_time / 60.0 / 60.0 / 1000.0);
 		
 		in[fType.MoveDis.ordinal()] = (float) (Math.log( valid_movedis+1)/Math.log(2))  ;
 		if(valid_time > 0)
@@ -87,18 +89,23 @@ public class GeoInfo {
 			double ratio = (time.get(str[i]) / timecount);//这一段占总时间的比例
 			in[fType.AveLocX.ordinal()] += Float.parseFloat(loc[1]) * ratio;
 			in[fType.AveLocY.ordinal()] += Float.parseFloat(loc[0]) * ratio;
+			in[fType.AveLocXS.ordinal()] += Float.parseFloat(loc[1]) * ratio;
+			in[fType.AveLocYS.ordinal()] += Float.parseFloat(loc[0]) * ratio;
 		}
 		
 		in[fType.MoveRatio.ordinal()]=(float)(moveratio/moveratiotime);
+		in[fType.MoveRatioS.ordinal()]=(float)(moveratio/moveratiotime);
 		if(moveratiotime==0){
 			CellSite cell0 = sp.site.get(p[0].site);
 			CellSite cell1 = sp.site.get(p[1].site);
-			double dis0=GPS2Dist.distance(cell0.latitude, cell0.longitude, in[fType.HomeLocY.ordinal()], in[fType.HomeLocX.ordinal()]);
-			double dis1=GPS2Dist.distance(cell1.latitude, cell1.longitude, in[fType.HomeLocY.ordinal()], in[fType.HomeLocX.ordinal()]);
+			double dis0=GPS2Dist.distance(cell0.latitude, cell0.longitude, latitude, longitude);
+			double dis1=GPS2Dist.distance(cell1.latitude, cell1.longitude, latitude, longitude);
 			in[fType.MoveRatio.ordinal()]=(float)((dis0+dis1)/2.0);
+			in[fType.MoveRatioS.ordinal()]=(float)((dis0+dis1)/2.0);
 		}
 
 		in[fType.MoveRatio.ordinal()]= (float)(  Math.log(in[fType.MoveRatio.ordinal()]+1)/Math.log(2)   );
+		in[fType.MoveRatioS.ordinal()]= (float)(  Math.log(in[fType.MoveRatioS.ordinal()]+1)/Math.log(2)   );
 
 		//rg
 		double sum_rg=0;

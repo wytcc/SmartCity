@@ -61,7 +61,7 @@ public class Kmeans {
      */
     public static void updateCenters(int k, KmeansData data) {
         double[][] centers = data.centers;
-        setDouble2Zero(centers, k, data.dim);
+        setDouble2Zero(centers, k, data.dim);//清空centers这个二维数组
         int[] labels = data.labels;
         int[] centerCounts = data.centerCounts;
         for (int i = 0; i < data.dim; i++) {
@@ -143,7 +143,7 @@ public class Kmeans {
             for (int i = 0; i < k; i++) {
                 int m = seeds.remove(0);
                 for (int j = 0; j < data.dim; j++) {
-                    centers[i][j] = data.data[m][j];
+                    centers[i][j] = data.data[m][j];//初始化中心点
                 }
             }
         } else { // 选取前k个点位初始聚类中心
