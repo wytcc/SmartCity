@@ -83,7 +83,7 @@ public class CodeWordsGenerator {
 	ClusterModule cm;
 	ResidenceDistribution rd;
 	GeoInfo gi;
-	String databasename="mobiledata2016";//SQL数据库名
+	String databasename="mobiledata2016test";//SQL数据库名
 	int size=50;
 	public CodeWordsGenerator() {
 
@@ -94,8 +94,8 @@ public class CodeWordsGenerator {
 			module.coll3=module.db.getCollection("featurevector_test");
 		}
 		else{
-			module.coll2=module.db.getCollection("templist2016");
-			module.coll3=module.db.getCollection("featurevector2016");
+			module.coll2=module.db.getCollection("templist2016test");
+			module.coll3=module.db.getCollection("featurevector2016test");
 		}
 		if(module.coll2.find().count()>0){  
 			module.coll2.remove(new BasicDBObject());  //To remove all documents use the BasicDBObject
@@ -291,7 +291,7 @@ public class CodeWordsGenerator {
 							//System.out.println("============"+i+"\t"+t+"================");
 							Meta[] pt = prune2(p, t);
 							int flagfeature = 1;
-							System.out.println("pt's length" + pt.length);
+							//System.out.println("pt's length" + pt.length);
 							e.time[t][0]=pt[0].time;
 							e.time[t][1]=pt[pt.length-1].time;
 
@@ -329,7 +329,7 @@ public class CodeWordsGenerator {
 								////////////////////////////////////
 
 								MobilityEntropy.entropy(pt, e.featureVector[t]);//计算得到ETrand和Eunc的值
-								gi.getGeoInfo(pt, e.featureVector[t], Residence_longitude, Residence_latitude);//计算得到MoveDis、AveSpeed、AveLocX、AveLocY、MoveRatio、Rg的值
+								gi.getGeoInfo(pt, e.featureVector[t], Residence_latitude, Residence_longitude);//计算得到MoveDis、AveSpeed、AveLocX、AveLocY、MoveRatio、Rg的值
 								BasicDBObject doc=new BasicDBObject();
 								ArrayList reocords=new ArrayList<>();
 								for(int k=0;k<pt.length;k++){
@@ -533,7 +533,7 @@ public class CodeWordsGenerator {
 		int[][] statetimecount=new int[timeidcount][2];
 		try {
 			String filename="Matlab";
-			if(databasename=="mobiledata2016")
+			if(databasename=="mobiledata2016test")
 				filename="Matlab_test";
 			DataOutputStream datawriter = new DataOutputStream(
 						new BufferedOutputStream(new FileOutputStream("data/"+filename)));
@@ -616,8 +616,10 @@ public class CodeWordsGenerator {
 		int[][][] countwithouttime=new int[cm.clusternum][fType.values().length][catalogs];
 		int[][][][] clusterstatistics=new int[timepiececount][cm.clusternum][fType.values().length][catalogs];
 		int[][] clustertotal=new int[fType.values().length][catalogs];
-		float [][] clusteravg=new float[cm.clusternum][fType.values().length];
-		int [][] clustercount=new int[cm.clusternum][fType.values().length];
+		float [][] clusteravgS=new float[cm.clusternum/2][4];
+		int [][] clustercountS=new int[cm.clusternum/2][4];
+		float [][] clusteravgM=new float[cm.clusternum/2][8];
+		int [][] clustercountM=new int[cm.clusternum/2][8];
 		int [][][] statecount=new int[timepiececount][cm.clusternum][2];
 
 		int [] nodesize=new int[cm.clusternum];
@@ -942,9 +944,9 @@ public class CodeWordsGenerator {
 					if(dim==catalogs)
 						dim=catalogs-1;
 					countwithouttime[cm.dataStop.labels[index]+10][id][dim]++;
-					clustertotal[id][dim]++;
-					clusteravg[cm.dataStop.labels[index]+10][id]+=cm.dataStop.data[index][id];
-					clustercount[cm.dataStop.labels[index]+10][id]++;
+					clustertotal[id+8][dim]++;
+					clusteravgS[cm.dataStop.labels[index]][id]+=cm.dataStop.data[index][id];
+					clustercountS[cm.dataStop.labels[index]][id]++;
 				}
 			}else if (cm.moveDataMap.containsKey(validFrameCount)){
 				index = cm.moveDataMap.get(validFrameCount);
@@ -954,8 +956,8 @@ public class CodeWordsGenerator {
 						dim=catalogs-1;
 					countwithouttime[cm.dataMove.labels[index]][id][dim]++;
 					clustertotal[id][dim]++;
-					clusteravg[cm.dataMove.labels[index]][id]+=cm.dataMove.data[index][id];
-					clustercount[cm.dataMove.labels[index]][id]++;
+					clusteravgM[cm.dataMove.labels[index]][id]+=cm.dataMove.data[index][id];
+					clustercountM[cm.dataMove.labels[index]][id]++;
 				}
 			}
 			
@@ -1083,32 +1085,27 @@ public class CodeWordsGenerator {
 		sql="INSERT INTO "+databasename+".clusteravg VALUES (?,?,?)";
 		psts = (PreparedStatement) sqlModule.conn.prepareStatement(sql);
 		t=System.currentTimeMillis();
-		for(int i=0;i<cm.clusternum;i++){
-			if (cm.stopDataMap.containsKey(validFrameCount)){
-				for(int j = 0; j < 4; j++){
-					float tmp=(float) (clusteravg[i][j]/clustercount[i][j]);
-					psts.setInt(1, i);
-					psts.setInt(2, j);
-					psts.setFloat(3, tmp);
-					psts.addBatch();
-				}
-			}else if(cm.moveDataMap.containsKey(validFrameCount)){
-				for(int j = 0; j < 8; j++){
-					float tmp=(float) (clusteravg[i][j]/clustercount[i][j]);
-					psts.setInt(1, i);
-					psts.setInt(2, j);
-					psts.setFloat(3, tmp);
-					psts.addBatch();
-				}
+		
+		for (int i = 0; i < cm.clusternum/2; i++){
+			for(int j = 0; j < clusteravgM[i].length; j++){
+				float tmp=(float) (clusteravgM[i][j]/clustercountM[i][j]);
+				psts.setInt(1, i);
+				psts.setInt(2, j);
+				psts.setFloat(3, tmp);
+				psts.addBatch();
 			}
-//			for(int j=0;j<clusteravg[i].length;j++){
-//				float tmp=(float) (clusteravg[i][j]/clustercount[i][j]);
-//				psts.setInt(1, i);
-//				psts.setInt(2, j);
-//				psts.setFloat(3, tmp);
-//				psts.addBatch();			
-//			}
 		}
+		
+		for (int i = cm.clusternum/2; i < cm.clusternum; i++){
+			for(int j = 0; j < clusteravgS[i-10].length; j++){
+				float tmp=(float) (clusteravgS[i-10][j]/clustercountS[i-10][j]);
+				psts.setInt(1, i);
+				psts.setInt(2, j);
+				psts.setFloat(3, tmp);
+				psts.addBatch();
+			}
+		}
+		
 		psts.executeBatch();
 		System.out.println("write clusterstatistics average end\ncost: "+(System.currentTimeMillis()-t)/1000.0);
 		System.out.println();
