@@ -73,6 +73,7 @@ public class GeoInfo {
 		}//for
 		
 		in[fType.TDS.ordinal()] = (float)(valid_time / 60.0 / 60.0 / 1000.0);
+		in[fType.TDS.ordinal()]=(float) (Math.log( 1+in[fType.TDS.ordinal()])/Math.log(2));
 		
 		in[fType.MoveDis.ordinal()] = (float) (Math.log( valid_movedis+1)/Math.log(2))  ;
 		if(valid_time > 0)
