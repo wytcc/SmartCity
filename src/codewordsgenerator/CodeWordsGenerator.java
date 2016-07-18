@@ -613,7 +613,7 @@ public class CodeWordsGenerator {
 		
 		int timepiececount=(int) ((etime-stime)/interval);
 
-		int[][][] countwithouttime=new int[cm.clusternum][fType.values().length][catalogs];
+		int[][][] countwithouttime=new int[cm.clusternum][fType.values().length][catalogs];//右上面板灰色平行坐标中，分十层catalog=10
 		int[][][][] clusterstatistics=new int[timepiececount][cm.clusternum][fType.values().length][catalogs];
 		int[][] clustertotal=new int[fType.values().length][catalogs];
 		float [][] clusteravgS=new float[cm.clusternum/2][4];
@@ -698,7 +698,7 @@ public class CodeWordsGenerator {
 							int dim=(int) Math.floor(cm.dataStop.data[index][id]*(catalogs*1.0));
 							if(dim==catalogs)
 								dim=catalogs-1;
-							clusterstatistics[timeindex][cm.dataStop.labels[index]+10][id][dim]++;
+							clusterstatistics[timeindex][cm.dataStop.labels[index]+10][id+8][dim]++;
 						}
 						
 						double[] codewords=new double[cm.dataStop.data[index].length];//cm.dataStop.data[index].length指的是特征向量数
@@ -860,7 +860,7 @@ public class CodeWordsGenerator {
 				if (cm.stopDataMap.containsKey(validFrameCount)){
 					index = cm.stopDataMap.get(validFrameCount);
 					for(int k=0;k<cm.dataStop.data[index].length;k++){
-						dataavg[k]+=cm.dataStop.data[index][k];
+						dataavg[k+8]+=cm.dataStop.data[index][k];
 					}
 				}else if (cm.moveDataMap.containsKey(validFrameCount)){
 					index = cm.moveDataMap.get(validFrameCount);
@@ -879,7 +879,7 @@ public class CodeWordsGenerator {
 				if (cm.stopDataMap.containsKey(validFrameCount)){
 					index = cm.stopDataMap.get(validFrameCount);
 					for(int k=0;k<cm.dataStop.data[index].length;k++){
-						dataavg[k]+=cm.dataStop.data[index][k];
+						dataavg[k+8]+=cm.dataStop.data[index][k];
 					}
 				}else if (cm.moveDataMap.containsKey(validFrameCount)){
 					index = cm.moveDataMap.get(validFrameCount);
@@ -925,7 +925,7 @@ public class CodeWordsGenerator {
 				if (cm.stopDataMap.containsKey(validFrameCount)){
 					index = cm.stopDataMap.get(validFrameCount);
 					for(int k=0;k<cm.dataStop.data[index].length;k++){
-						dataavg[k]+=cm.dataStop.data[index][k];
+						dataavg[k+8]+=cm.dataStop.data[index][k];
 					}
 				}else if (cm.moveDataMap.containsKey(validFrameCount)){
 					index = cm.moveDataMap.get(validFrameCount);
@@ -943,7 +943,7 @@ public class CodeWordsGenerator {
 					int dim=(int) Math.floor(cm.dataStop.data[index][id]*(catalogs*1.0));
 					if(dim==catalogs)
 						dim=catalogs-1;
-					countwithouttime[cm.dataStop.labels[index]+10][id][dim]++;
+					countwithouttime[cm.dataStop.labels[index]+10][id+8][dim]++;
 					clustertotal[id+8][dim]++;
 					clusteravgS[cm.dataStop.labels[index]][id]+=cm.dataStop.data[index][id];
 					clustercountS[cm.dataStop.labels[index]][id]++;
