@@ -811,12 +811,18 @@ public class CodeWordsGenerator {
 				clusterid = cm.dataStop.labels[index]+10;
 			}else if (cm.moveDataMap.containsKey(validFrameCount)){
 				index = cm.moveDataMap.get(validFrameCount);
-				clusterid = cm.dataStop.labels[index];
+				clusterid = cm.dataMove.labels[index];
 			}
 			int moveflag=(Integer)dbj.get("movestate");
 			long starttime=(long)dbj.get("starttime");
 			long endtime=(long)dbj.get("endtime");
-
+//			String userId = (String)dbj.get("userid");
+			long ID=(long)dbj.get("userid");
+			if(ID == 460028687435371l && validFrameCount == 298){
+				System.out.println("starttime: " + starttime);
+				System.out.println("endtime: " + endtime);
+				System.out.println("cluster: " + clusterid);
+			}
 			int startid=(int)Math.ceil((starttime-stime)/interval);
 			int endid=(int)Math.floor((endtime-stime)/interval);
 			Double homelocx=(Double)dbj.get("HomeLocX");
@@ -1116,11 +1122,12 @@ public class CodeWordsGenerator {
 		t=System.currentTimeMillis();
 		for(int i=0;i<timepiececount;i++){
 			for(int j=0;j<statecount[i].length;j++){
-				float tmp;
-				if(statecount[i][j][0]+statecount[i][j][1]==0)
-					tmp=0;
-				else
-					tmp=(float) (statecount[i][j][1])/(statecount[i][j][0]+statecount[i][j][1]);
+				float tmp = 0;
+				if (j > 9){
+					tmp = 0;
+				}else if(j <= 9){
+					tmp = 1;
+				}
 				int count=statecount[i][j][0]+statecount[i][j][1];
 				psts.setInt(1, i);
 				psts.setInt(2, j);
