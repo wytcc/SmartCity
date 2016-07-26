@@ -63,7 +63,8 @@ public class CodeWordsGenerator {
 
 	long stime = 0;
 	long etime = 0;
-	long interval = 0;
+	static long interval = 2 * 60 * 60 * 1000;
+	static long intervalFor168 = 1 * 60 * 60 * 1000;
 	long frameinterval = 0;
 	MongoModule module = new MongoModule();
 	Color[] col_schema;
@@ -83,7 +84,7 @@ public class CodeWordsGenerator {
 	ClusterModule cm;
 	ResidenceDistribution rd;
 	GeoInfo gi;
-	String databasename="mobiledata2016test";//SQL数据库名
+	String databasename="mobile84and168test";//SQL数据库名
 	int size=50;
 	public CodeWordsGenerator() {
 
@@ -94,8 +95,8 @@ public class CodeWordsGenerator {
 			module.coll3=module.db.getCollection("featurevector_test");
 		}
 		else{
-			module.coll2=module.db.getCollection("templist2016test");
-			module.coll3=module.db.getCollection("featurevector2016test");
+			module.coll2=module.db.getCollection("templist2016test168");
+			module.coll3=module.db.getCollection("featurevector2016test168");
 		}
 		if(module.coll2.find().count()>0){  
 			module.coll2.remove(new BasicDBObject());  //To remove all documents use the BasicDBObject
@@ -118,7 +119,8 @@ public class CodeWordsGenerator {
 			e.printStackTrace();
 		}
 
-		interval = 2 * 60 * 60 * 1000;// 2 hour
+//		interval = 2 * 60 * 60 * 1000;// 2 hour
+//		intervalFor168 = 1 * 60 * 60 * 1000;// 1 hour
 		frameinterval = 15 * 60 * 1000;// 15 min
 		
 		userTrajReader();//初始化codewords、validTrajCount、validFrameCount
@@ -259,9 +261,9 @@ public class CodeWordsGenerator {
 						e.moveornot=new boolean[streamNum];//是否是运动轨迹
 						e.time= new Long[streamNum][2];//这里的二维分别代表开始时间和结束时间
 						
-						e.featureVector = new float[streamNum][fType.values().length];//特征向量，分别描述每一段是什么，十个特征
+						e.featureVector = new float[streamNum][fType.values().length];//特征向量，分别描述每一段是什么，十二个特征
 						//动静轨迹片段不同，动的占前八位，静的占后四位
-						e.location = new float[streamNum][(int) (2 * interval / frameinterval)];
+//						e.location = new float[streamNum][(int) (2 * interval / frameinterval)];
 						float Residence_longitude = 0;//住宅的经纬度
 						float Residence_latitude = 0;
 						//////////////
@@ -315,7 +317,7 @@ public class CodeWordsGenerator {
 							}
 							if (flagfeature == 0) {
 								e.featureVector[t] = null;
-								e.location[t] = null;
+//								e.location[t] = null;
 								continue;
 							}
 							
@@ -533,8 +535,8 @@ public class CodeWordsGenerator {
 		int[][] statetimecount=new int[timeidcount][2];
 		try {
 			String filename="Matlab";
-			if(databasename=="mobiledata2016test")
-				filename="Matlab_test";
+			if(databasename=="mobile84and168test")
+				filename="Matlab_test_168";
 			DataOutputStream datawriter = new DataOutputStream(
 						new BufferedOutputStream(new FileOutputStream("data/"+filename)));
 			
@@ -609,9 +611,9 @@ public class CodeWordsGenerator {
 
 	}
 
-	public void writemysql() throws SQLException{
+	public void writemysql(long timeInterval) throws SQLException{
 		
-		int timepiececount=(int) ((etime-stime)/interval);
+		int timepiececount=(int) ((etime-stime)/timeInterval);
 
 		int[][][] countwithouttime=new int[cm.clusternum][fType.values().length][catalogs];//右上面板灰色平行坐标中，分十层catalog=10
 		int[][][][] clusterstatistics=new int[timepiececount][cm.clusternum][fType.values().length][catalogs];
@@ -635,41 +637,78 @@ public class CodeWordsGenerator {
 		
 		Statement stmt = sqlModule.conn.createStatement();
 		System.out.println("Clear Old Data ...");
-		stmt.execute(truncateString+ databasename + ".clustertrajectory");
-		stmt.execute(truncateString+ databasename + ".clusterstatistics");
-		stmt.execute(truncateString+ databasename + ".clusterrange");
-		stmt.execute(truncateString+ databasename + ".clustertrajwithouttime");
-		stmt.execute(truncateString+ databasename + ".clusterstatisticswithoutt");
-		stmt.execute(truncateString+ databasename + ".clustertotal");
-		stmt.execute(truncateString+ databasename + ".clusteravg");
-		stmt.execute(truncateString+ databasename + ".statecount");
-		stmt.execute(truncateString+ databasename + ".usercountdata");
-		stmt.execute(truncateString+ databasename + ".nodeusers");
-		stmt.execute(truncateString+ databasename + ".nodeuserswithouttime");
-		stmt.execute(truncateString+ databasename + ".nodesize");
+		if(timeInterval == 2 * 60 * 60 * 1000){
+			stmt.execute(truncateString+ databasename + ".clustertrajectory");
+			stmt.execute(truncateString+ databasename + ".clusterstatistics");
+			stmt.execute(truncateString+ databasename + ".clusterrange");
+			stmt.execute(truncateString+ databasename + ".clustertrajwithouttime");
+			stmt.execute(truncateString+ databasename + ".clusterstatisticswithoutt");
+			stmt.execute(truncateString+ databasename + ".clustertotal");
+			stmt.execute(truncateString+ databasename + ".clusteravg");
+			stmt.execute(truncateString+ databasename + ".statecount");
+			stmt.execute(truncateString+ databasename + ".usercountdata");
+			stmt.execute(truncateString+ databasename + ".nodeusers");
+			stmt.execute(truncateString+ databasename + ".nodeuserswithouttime");
+			stmt.execute(truncateString+ databasename + ".nodesize");
+		}else if(timeInterval == 1 * 60 * 60 * 1000){
+			stmt.execute(truncateString+ databasename + ".clustertrajectoryfor168");
+			stmt.execute(truncateString+ databasename + ".clusterstatisticsfor168");
+			stmt.execute(truncateString+ databasename + ".clusterrange");
+			stmt.execute(truncateString+ databasename + ".clustertrajwithouttimefor168");
+			stmt.execute(truncateString+ databasename + ".clusterstatisticswithouttfor168");
+			stmt.execute(truncateString+ databasename + ".clustertotalfor168");
+			stmt.execute(truncateString+ databasename + ".clusteravgfor168");
+			stmt.execute(truncateString+ databasename + ".statecountfor168");
+			stmt.execute(truncateString+ databasename + ".usercountdatafor168");
+			stmt.execute(truncateString+ databasename + ".nodeusersfor168");
+			stmt.execute(truncateString+ databasename + ".nodeuserswithouttimefor168");
+			stmt.execute(truncateString+ databasename + ".nodesize");
+		}
+		
 
 		System.out.println("truncate completed");
-		stmt.execute("DROP INDEX inddex on "+ databasename + ".clustertrajectory");
-		stmt.execute("DROP INDEX inddex on "+ databasename + ".clusterstatistics");
-		stmt.execute("DROP INDEX inddex on "+ databasename + ".clustertrajwithouttime");
-		stmt.execute("DROP INDEX inddex on "+ databasename + ".clusterstatisticswithoutt");
-		stmt.execute("DROP INDEX inddex on "+ databasename + ".clustertotal");
-		stmt.execute("DROP INDEX inddex on "+ databasename + ".clusteravg");
-		stmt.execute("DROP INDEX inddex on "+ databasename + ".statecount");
-		stmt.execute("DROP INDEX inddex on "+ databasename + ".usercountdata");
-		stmt.execute("DROP INDEX inddex on "+ databasename + ".nodeusers");
-		stmt.execute("DROP INDEX inddex on "+ databasename + ".nodeuserswithouttime");
-		stmt.execute("DROP INDEX inddex on "+ databasename + ".nodesize");
+		if(timeInterval == 2 * 60 * 60 * 1000){
+			stmt.execute("DROP INDEX inddex on "+ databasename + ".clustertrajectory");
+			stmt.execute("DROP INDEX inddex on "+ databasename + ".clusterstatistics");
+			stmt.execute("DROP INDEX inddex on "+ databasename + ".clustertrajwithouttime");
+			stmt.execute("DROP INDEX inddex on "+ databasename + ".clusterstatisticswithoutt");
+			stmt.execute("DROP INDEX inddex on "+ databasename + ".clustertotal");
+			stmt.execute("DROP INDEX inddex on "+ databasename + ".clusteravg");
+			stmt.execute("DROP INDEX inddex on "+ databasename + ".statecount");
+			stmt.execute("DROP INDEX inddex on "+ databasename + ".usercountdata");
+			stmt.execute("DROP INDEX inddex on "+ databasename + ".nodeusers");
+			stmt.execute("DROP INDEX inddex on "+ databasename + ".nodeuserswithouttime");
+			stmt.execute("DROP INDEX inddex on "+ databasename + ".nodesize");
+		}else if(timeInterval == 1 * 60 * 60 * 1000){
+			stmt.execute("DROP INDEX index2 on "+ databasename + ".clustertrajectoryfor168");
+			stmt.execute("DROP INDEX index2 on "+ databasename + ".clusterstatisticsfor168");
+			stmt.execute("DROP INDEX index2 on "+ databasename + ".clustertrajwithouttimefor168");
+			stmt.execute("DROP INDEX index2 on "+ databasename + ".clusterstatisticswithouttfor168");
+			stmt.execute("DROP INDEX index2 on "+ databasename + ".clustertotalfor168");
+			stmt.execute("DROP INDEX index2 on "+ databasename + ".clusteravgfor168");
+			stmt.execute("DROP INDEX index2 on "+ databasename + ".statecountfor168");
+			stmt.execute("DROP INDEX index2 on "+ databasename + ".usercountdatafor168");
+			stmt.execute("DROP INDEX index2 on "+ databasename + ".nodeusersfor168");
+			stmt.execute("DROP INDEX index2 on "+ databasename + ".nodeuserswithouttimefor168");
+//	//		stmt.execute("DROP INDEX index on "+ databasename + ".nodesize");
+		}
+		
 
 		System.out.println("Clear Old Data finish");
 		System.out.println();
-		String insert_sql1="INSERT INTO "+databasename+".clustertrajectory VALUES (?,?,?,?,?)";
+		String insert_sql1 = "";
+		if(timeInterval == 2 * 60 * 60 * 1000){
+			insert_sql1="INSERT INTO "+databasename+".clustertrajectory VALUES (?,?,?,?,?)";
+		}else if(timeInterval == 1 * 60 * 60 * 1000){
+			insert_sql1="INSERT INTO "+databasename+".clustertrajectoryfor168 VALUES (?,?,?,?,?)";
+		}
+		
 		
 	    PreparedStatement psts = (PreparedStatement) sqlModule.conn.prepareStatement(insert_sql1);
 
 		int total=0;
 		Long t =System.currentTimeMillis();
-		for(long i=stime;i<etime;i=i+interval){
+		for(long i=stime;i<etime;i=i+timeInterval){
 			long time=i;
 			
 				BasicDBObject queryObject = new BasicDBObject().append("starttime",  
@@ -688,7 +727,7 @@ public class CodeWordsGenerator {
 					double distance=0.0;
 					int moveflag=(Integer)dbj.get("movestate");
 					long userid=(long)dbj.get("userid");
-					int timeindex=(int) ((time-stime)/interval);
+					int timeindex=(int) ((time-stime)/timeInterval);
 					
 					if (cm.stopDataMap.containsKey(validFrameCount)){//静
 						index = cm.stopDataMap.get(validFrameCount);
@@ -755,7 +794,7 @@ public class CodeWordsGenerator {
 						String sql= "insert into "+tableName+" values";
 							Collections.sort(result.get(s), new SortByDis());
 							for(int ss=0;ss<result.get(s).size();ss++){
-								int timeindex=(int) ((result.get(s).get(ss).time-stime)/interval);
+								int timeindex=(int) ((result.get(s).get(ss).time-stime)/timeInterval);
 								psts.setInt(1, result.get(s).get(ss).clusterid);
 								psts.setInt(2, timeindex);
 								psts.setInt(3, ss);
@@ -770,12 +809,29 @@ public class CodeWordsGenerator {
 		System.out.println("write trajectory end\ncost: "+(System.currentTimeMillis()-t)/1000.0);
 		System.out.println();
 		
-		String insert_sql2="INSERT INTO "+databasename+".clusterstatistics VALUES (?,?,?,?,?)";
-		String insert_sql3="INSERT INTO "+databasename+".clustertrajwithouttime VALUES (?,?,?,?)";
-		String insert_sql4="INSERT INTO "+databasename+".clusterstatisticswithoutt VALUES (?,?,?,?)";
-		String insert_sql5="INSERT INTO "+databasename+".usercountdata VALUES (? ,? ,? ,? ,? , ? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? "
-																			+ ",? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? "
-																				+ ",? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,?)";
+		String insert_sql2 = "";
+		String insert_sql3 = "";
+		String insert_sql4 = "";
+		String insert_sql5 = "";
+		if(timeInterval == 2 * 60 * 60 * 1000){
+			insert_sql2="INSERT INTO "+databasename+".clusterstatistics VALUES (?,?,?,?,?)";
+			insert_sql3="INSERT INTO "+databasename+".clustertrajwithouttime VALUES (?,?,?,?)";
+			insert_sql4="INSERT INTO "+databasename+".clusterstatisticswithoutt VALUES (?,?,?,?)";
+			insert_sql5="INSERT INTO "+databasename+".usercountdata VALUES (? ,? ,? ,? ,? , ? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? "
+					+ ",? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? "
+					+ ",? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,?)";
+					
+		}else if(timeInterval == 1 * 60 * 60 * 1000){
+			insert_sql2="INSERT INTO "+databasename+".clusterstatisticsfor168 VALUES (?,?,?,?,?)";
+			insert_sql3="INSERT INTO "+databasename+".clustertrajwithouttimefor168 VALUES (?,?,?,?)";
+			insert_sql4="INSERT INTO "+databasename+".clusterstatisticswithouttfor168 VALUES (?,?,?,?)";
+			insert_sql5="INSERT INTO "+databasename+".usercountdatafor168 VALUES (? ,? ,? ,? ,? , ? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? "
+					+ ",? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? "
+					+ ",? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? , ? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? "
+					+ ",? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? "
+					+ ",? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,?)";
+		}
+		
 
 	    PreparedStatement psts2 = (PreparedStatement) sqlModule.conn.prepareStatement(insert_sql5);
 	    psts=(PreparedStatement) sqlModule.conn.prepareStatement(insert_sql3);
@@ -795,9 +851,16 @@ public class CodeWordsGenerator {
 		String clusterreocrd="";
 		int datacount=0;
 		int timecount[]=new int[timepiececount];
-		for(int i=0;i<84;i++){
-			timecount[i]=-1;
+		if(timeInterval == 2 * 60 * 60 * 1000){
+			for(int i=0;i<84;i++){
+				timecount[i]=-1;
+			}
+		}else if(timeInterval == 1 * 60 * 60 * 1000){
+			for(int i=0;i<168;i++){
+				timecount[i]=-1;
+			}
 		}
+		
 		double[] dataavg=new double [fType.values().length];
 		Double prehomelocx = 0.0;
 		Double prehomelocy= 0.0;
@@ -818,13 +881,16 @@ public class CodeWordsGenerator {
 			long endtime=(long)dbj.get("endtime");
 //			String userId = (String)dbj.get("userid");
 			long ID=(long)dbj.get("userid");
-			if(ID == 460028687435371l && validFrameCount == 298){
+			
+			int startid=(int)Math.ceil((starttime-stime)/(timeInterval*1.00));
+			int endid=(int)Math.floor((endtime-stime)/(timeInterval*1.00));
+			if(ID == 460028687435371l){
 				System.out.println("starttime: " + starttime);
 				System.out.println("endtime: " + endtime);
 				System.out.println("cluster: " + clusterid);
+				System.out.println("startid: " + startid);
+				System.out.println("endid: " + endid);
 			}
-			int startid=(int)Math.ceil((starttime-stime)/interval);
-			int endid=(int)Math.floor((endtime-stime)/interval);
 			Double homelocx=(Double)dbj.get("HomeLocX");
 			Double homelocy=(Double)dbj.get("HomeLocY");	
 			////////////////////
@@ -839,12 +905,18 @@ public class CodeWordsGenerator {
 			}
 			String traj="";
 			String tmp="";
-			//一共是84，可能会改 加倍一下
-			if (startid<0)
-				startid=0;
-			if(endid>83)
-				endid=83;
-
+			if(timeInterval == 2 * 60 * 60 * 1000){
+				if (startid<0)
+					startid=0;
+				if(endid>83)
+					endid=83;
+			}else if(timeInterval == 1 * 60 * 60 * 1000){
+				if (startid<0)
+					startid=0;
+				if(endid>167)
+					endid=167;
+			}
+			
 			if(startid<=endid){
 				for(int s=startid;s<endid;s++){
 					if(nodeuser[s][clusterid].length()==0){
@@ -910,14 +982,28 @@ public class CodeWordsGenerator {
 				psts2.setString(3, featurevectoravg);
 				psts2.setDouble(4, prehomelocx);
 				psts2.setDouble(5, prehomelocy);
-				for(int i=0;i<84;i++){
-					psts2.setInt(6+i, timecount[i]);
+				if(timeInterval == 2 * 60 * 60 * 1000){
+					for(int i=0;i<84;i++){
+						psts2.setInt(6+i, timecount[i]);
+					}
+				}else if(timeInterval == 1 * 60 * 60 * 1000){
+					for(int i=0;i<168;i++){
+						psts2.setInt(6+i, timecount[i]);
+					}
 				}
+				
 				psts2.addBatch();
 
-				for(int i=0;i<84;i++){
-					timecount[i]=-1;
+				if(timeInterval == 2 * 60 * 60 * 1000){
+					for(int i=0;i<84;i++){
+						timecount[i]=-1;
+					}
+				}else if(timeInterval == 1 * 60 * 60 * 1000){
+					for(int i=0;i<168;i++){
+						timecount[i]=-1;
+					}
 				}
+				
 				if(startid<=endid){
 					for(int i=startid;i<endid;i++){
 						timecount[i]=clusterid;
@@ -1057,7 +1143,12 @@ public class CodeWordsGenerator {
 		System.out.println("write clusterstatistics without time end\ncost: "+(System.currentTimeMillis()-t)/1000.0);
 		System.out.println();
 		
-		String sql="INSERT INTO "+databasename+".clustertotal VALUES (?,?,?)";
+		String sql = "";
+		if(timeInterval == 2 * 60 * 60 * 1000){
+			sql="INSERT INTO "+databasename+".clustertotal VALUES (?,?,?)";
+		}else if(timeInterval == 1 * 60 * 60 * 1000){
+			sql="INSERT INTO "+databasename+".clustertotalfor168 VALUES (?,?,?)";
+		}
 		psts = (PreparedStatement) sqlModule.conn.prepareStatement(sql);
 		System.out.println("start writing clusterstatistics total");
 		t=System.currentTimeMillis();
@@ -1088,7 +1179,12 @@ public class CodeWordsGenerator {
 
 		
 		System.out.println("start writing clusterstatistics average");
-		sql="INSERT INTO "+databasename+".clusteravg VALUES (?,?,?)";
+		if(timeInterval == 2 * 60 * 60 * 1000){
+			sql="INSERT INTO "+databasename+".clusteravg VALUES (?,?,?)";
+		}else if(timeInterval == 1 * 60 * 60 * 1000){
+			sql="INSERT INTO "+databasename+".clusteravgfor168 VALUES (?,?,?)";
+		}
+		
 		psts = (PreparedStatement) sqlModule.conn.prepareStatement(sql);
 		t=System.currentTimeMillis();
 		
@@ -1117,7 +1213,12 @@ public class CodeWordsGenerator {
 		System.out.println();
 		
 		System.out.println("start writing state count");
-		sql="INSERT INTO "+databasename+".statecount VALUES (?,?,?,?)";
+		if(timeInterval == 2 * 60 * 60 * 1000){
+			sql="INSERT INTO "+databasename+".statecount VALUES (?,?,?,?)";
+		}else if(timeInterval == 1 * 60 * 60 * 1000){
+			sql="INSERT INTO "+databasename+".statecountfor168 VALUES (?,?,?,?)";
+		}
+		
 		psts = (PreparedStatement) sqlModule.conn.prepareStatement(sql);
 		t=System.currentTimeMillis();
 		for(int i=0;i<timepiececount;i++){
@@ -1141,7 +1242,12 @@ public class CodeWordsGenerator {
 		System.out.println();
 		
 		System.out.println("start writing node users");
-		sql="INSERT INTO "+databasename+".nodeusers VALUES (?,?,?)";
+		if(timeInterval == 2 * 60 * 60 * 1000){
+			sql="INSERT INTO "+databasename+".nodeusers VALUES (?,?,?)";
+		}else if(timeInterval == 1 * 60 * 60 * 1000){
+			sql="INSERT INTO "+databasename+".nodeusersfor168 VALUES (?,?,?)";
+		}
+		
 		psts = (PreparedStatement) sqlModule.conn.prepareStatement(sql);
 		t=System.currentTimeMillis();
 		for(int i=0;i<timepiececount;i++)
@@ -1156,7 +1262,12 @@ public class CodeWordsGenerator {
 		System.out.println();
 		
 		System.out.println("start writing node users without time ");
-		sql="INSERT INTO "+databasename+".nodeuserswithouttime VALUES (?,?)";
+		if(timeInterval == 2 * 60 * 60 * 1000){
+			sql="INSERT INTO "+databasename+".nodeuserswithouttime VALUES (?,?)";
+		}else if(timeInterval == 1 * 60 * 60 * 1000){
+			sql="INSERT INTO "+databasename+".nodeuserswithouttimefor168 VALUES (?,?)";
+		}
+		
 		psts = (PreparedStatement) sqlModule.conn.prepareStatement(sql);
 		t=System.currentTimeMillis();
 		for(int i=0;i<cm.clusternum;i++){
@@ -1190,17 +1301,32 @@ public class CodeWordsGenerator {
 		System.out.println("creating indexes");
 		t=System.currentTimeMillis();
 
-		stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"clustertrajectory (clusterid,timeid)");
-		stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"clusterstatistics (timeindex,clusterindex)");
-		stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"clustertrajwithouttime (clusterid)");
-		stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"clusterstatisticswithoutt (clusterid)");
-		stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"clustertotal (dimindex)");
-		stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"clusteravg (clusterid)");
-		stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"statecount (timeindex,clusterid)");
-		stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"usercountdata (userid)");
-		stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"nodeusers (clusterid, timeid)");
-		stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"nodeuserswithouttime (clusterid)");
-		stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"nodesize (clusterid)");
+		if(timeInterval == 2 * 60 * 60 * 1000){
+			stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"clustertrajectory (clusterid,timeid)");
+			stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"clusterstatistics (timeindex,clusterindex)");
+			stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"clustertrajwithouttime (clusterid)");
+			stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"clusterstatisticswithoutt (clusterid)");
+			stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"clustertotal (dimindex)");
+			stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"clusteravg (clusterid)");
+			stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"statecount (timeindex,clusterid)");
+			stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"usercountdata (userid)");
+			stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"nodeusers (clusterid, timeid)");
+			stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"nodeuserswithouttime (clusterid)");
+			stmt.execute("CREATE INDEX inddex ON "+databasename+"."+"nodesize (clusterid)");
+		}else if(timeInterval == 1 * 60 * 60 * 1000){
+			stmt.execute("CREATE INDEX index2 ON "+databasename+"."+"clustertrajectoryfor168 (clusterid,timeid)");
+			stmt.execute("CREATE INDEX index2 ON "+databasename+"."+"clusterstatisticsfor168 (timeindex,clusterindex)");
+			stmt.execute("CREATE INDEX index2 ON "+databasename+"."+"clustertrajwithouttimefor168 (clusterid)");
+			stmt.execute("CREATE INDEX index2 ON "+databasename+"."+"clusterstatisticswithouttfor168 (clusterid)");
+			stmt.execute("CREATE INDEX index2 ON "+databasename+"."+"clustertotalfor168 (dimindex)");
+			stmt.execute("CREATE INDEX index2 ON "+databasename+"."+"clusteravgfor168 (clusterid)");
+			stmt.execute("CREATE INDEX index2 ON "+databasename+"."+"statecountfor168 (timeindex,clusterid)");
+			stmt.execute("CREATE INDEX index2 ON "+databasename+"."+"usercountdatafor168 (userid)");
+			stmt.execute("CREATE INDEX index2 ON "+databasename+"."+"nodeusersfor168 (clusterid, timeid)");
+			stmt.execute("CREATE INDEX index2 ON "+databasename+"."+"nodeuserswithouttimefor168 (clusterid)");
+//			stmt.execute("CREATE INDEX index ON "+databasename+"."+"nodesize (clusterid)");
+		}
+		
 		
 		
 		//System.out.println(sql);
@@ -1218,7 +1344,8 @@ public class CodeWordsGenerator {
 		CodeWordsGenerator cg = new CodeWordsGenerator();
 		cg.writeFile("data/trajfile.txt");
 		try {
-			cg.writemysql();
+			cg.writemysql(interval);
+			cg.writemysql(intervalFor168);
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
